@@ -12,6 +12,7 @@ import {
   pushBranch,
   type CommandResult,
 } from "./git.js";
+import { cloneRepository } from "./workspace.js";
 
 function formatResults(results: CommandResult | CommandResult[]): string {
   const list = Array.isArray(results) ? results : [results];
@@ -45,6 +46,17 @@ export function createMcpServer(): McpServer {
     name: "claude-github-operator",
     version: "0.1.0",
   });
+
+  server.tool(
+    "github_clone_repository",
+    "Clone an owner/name GitHub repository into the configured hosted workspace.",
+    {
+      repository: z.string().min(3),
+      destination_name: z.string().optional(),
+    },
+    async ({ repository, destination_name }) =>
+      toolResponse(() => cloneRepository(repository, destination_name)),
+  );
 
   server.tool(
     "git_status",
