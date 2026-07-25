@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: claude-github-operator
+    runtime: docker
+    plan: starter
+    autoDeploy: false
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: CLAUDE_GITHUB_WORKSPACE_ROOT
+        value: /workspace
+      - key: CLAUDE_GITHUB_ALLOWED_REPOS
+        value: /workspace
+      - key: CLAUDE_GITHUB_PROTECTED_BRANCHES
+        value: main,master,develop,production
+      - key: CLAUDE_GITHUB_ALLOW_PROTECTED_WRITES
+        value: "false"
+      - key: MCP_BEARER_TOKEN
+        generateValue: true
+      - key: GH_TOKEN
+        sync: false
+    disk:
+      name: github-workspace
+      mountPath: /workspace
+      sizeGB: 1

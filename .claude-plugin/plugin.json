@@ -1,0 +1,9 @@
+{
+  "name": "github-operator",
+  "version": "0.1.0",
+  "description": "Guarded GitHub operations for Claude: clone, pull, branch, commit, push, pull requests, and merges.",
+  "author": {
+    "name": "Kohron Burton"
+  },
+  "homepage": "https://github.com/Kohronburton/builders-desk-labs"
+}
