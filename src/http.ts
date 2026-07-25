@@ -14,7 +14,12 @@ function authorized(request: Request): boolean {
   if (!expected) return true;
 
   const header = request.header("authorization") ?? "";
-  const supplied = header.startsWith("Bearer ") ? header.slice(7) : "";
+  const headerToken = header.startsWith("Bearer ") ? header.slice(7) : "";
+  const queryToken = typeof request.query.token === "string"
+    ? request.query.token
+    : "";
+  const supplied = headerToken || queryToken;
+
   const expectedBuffer = Buffer.from(expected);
   const suppliedBuffer = Buffer.from(supplied);
 
