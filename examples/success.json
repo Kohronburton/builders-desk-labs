@@ -1,0 +1,6 @@
+{
+  "requestId": "demo-success-001",
+  "sessionId": "portfolio-demo",
+  "scenario": "success",
+  "message": "Our production email automation stopped after a webhook payload change."
+}

@@ -1,0 +1,52 @@
+{
+  "name": "AI Workflow Reliability - Global Error Handler",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "4c9bea18-eeba-4305-9549-a9507ae3cc40",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [-360, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { executionId: $json.execution?.id, workflowId: $json.workflow?.id, workflowName: $json.workflow?.name, message: $json.execution?.error?.message || 'n8n workflow failed', lastNodeExecuted: $json.execution?.lastNodeExecuted, occurredAt: new Date().toISOString() } }];"
+      },
+      "id": "dd86d4ca-9586-48de-83e1-931a841618b7",
+      "name": "Build Error Event",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-120, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://workflow-engine:3000/v1/events/n8n-error",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 5000 }
+      },
+      "id": "d937dff8-6a2c-49b4-9ac6-a52a1dfc8233",
+      "name": "Persist Failure Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [140, 0],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": { "main": [[{ "node": "Build Error Event", "type": "main", "index": 0 }]] },
+    "Build Error Event": { "main": [[{ "node": "Persist Failure Event", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "saveDataErrorExecution": "all" },
+  "versionId": "f7d38ef1-8862-4a53-b94e-56d8c94b33a0",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}
