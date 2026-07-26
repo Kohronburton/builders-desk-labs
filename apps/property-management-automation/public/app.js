@@ -1,10 +1,11 @@
-const state = { requests: [], filter: 'all' };
+const state = { requests: [], filter: 'all', providerStatus: null };
 
 const elements = {
   list: document.querySelector('#requestList'),
   form: document.querySelector('#requestForm'),
   dialog: document.querySelector('#detailDialog'),
-  detail: document.querySelector('#detailContent')
+  detail: document.querySelector('#detailContent'),
+  providerHealth: document.querySelector('#providerHealth')
 };
 
 const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (char) => ({
@@ -12,11 +13,23 @@ const escapeHtml = (value) => String(value).replace(/[&<>'"]/g, (char) => ({
 })[char]);
 
 function formatStatus(value) {
-  return value.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  return String(value || '').replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatTime(value) {
   return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(new Date(value));
+}
+
+function formatMoney(value) {
+  if (value === null || value === undefined) return 'Metered by provider';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 6 }).format(value);
+}
+
+function providerClass(provider) {
+  if (!provider) return 'local';
+  if (provider.tier === 'paid' || provider.tier === 'paid-simulated') return 'premium';
+  if (provider.tier === 'free') return 'free';
+  return 'local';
 }
 
 function renderMetrics(summary) {
@@ -26,18 +39,32 @@ function renderMetrics(summary) {
   document.querySelector('#metricConfidence').textContent = `${summary.avgAutomationConfidence}%`;
 }
 
+function renderProviderHealth() {
+  const status = state.providerStatus;
+  if (!status) return;
+  elements.providerHealth.innerHTML = `
+    <span class="provider-pill premium">Premium simulation ready</span>
+    <span class="provider-pill ${status.freeConfigured ? 'free' : 'muted'}">Free API ${status.freeConfigured ? 'connected' : 'optional'}</span>
+    <span class="provider-pill local">Local fallback ready</span>
+  `;
+}
+
 function renderRequests() {
   const visible = state.requests.filter((item) => state.filter === 'all' || item.priority === state.filter);
   elements.list.innerHTML = visible.length ? visible.map((item) => `
     <article class="request-card" data-id="${escapeHtml(item.id)}">
       <div>
-        <div><span class="badge ${item.priority}">${formatStatus(item.priority)}</span><span class="sla ${item.slaState}">${formatStatus(item.slaState)}</span></div>
+        <div class="request-badges">
+          <span class="badge ${item.priority}">${formatStatus(item.priority)}</span>
+          <span class="sla ${item.slaState}">${formatStatus(item.slaState)}</span>
+          <span class="provider-pill ${providerClass(item.aiProvider)}">${escapeHtml(item.aiProvider?.label || 'Local Engine')}</span>
+        </div>
         <h3>${escapeHtml(item.property)} · Unit ${escapeHtml(item.unit)}</h3>
         <p>${escapeHtml(item.description)}</p>
-        <div class="meta">${escapeHtml(item.id)} · ${escapeHtml(item.assignedTeam)} · ${formatStatus(item.status)}</div>
+        <div class="meta">${escapeHtml(item.id)} · ${escapeHtml(item.assignedTeam)} · ${formatStatus(item.status)} · ${item.aiProvider?.latencyMs ?? 0} ms</div>
       </div>
       <div class="request-actions">
-        <button type="button" data-action="details">Details</button>
+        <button type="button" data-action="details">Inspect automation</button>
         ${item.status !== 'completed' ? '<button type="button" data-action="advance">Advance</button>' : ''}
       </div>
     </article>
@@ -45,6 +72,7 @@ function renderRequests() {
 }
 
 function showDetails(item) {
+  const provider = item.aiProvider || { label: 'Local Engine', tier: 'local', model: 'deterministic-v1', latencyMs: 1, estimatedCostUsd: 0 };
   elements.detail.innerHTML = `
     <p class="eyebrow">${escapeHtml(item.id)}</p>
     <h2>${escapeHtml(item.property)} · Unit ${escapeHtml(item.unit)}</h2>
@@ -54,6 +82,20 @@ function showDetails(item) {
       <div><small>Assigned team</small><strong>${escapeHtml(item.assignedTeam)}</strong></div>
       <div><small>SLA deadline</small><strong>${formatTime(item.dueAt)}</strong></div>
       <div><small>Status</small><strong>${formatStatus(item.status)}</strong></div>
+    </div>
+    <div class="provider-card ${providerClass(provider)}">
+      <div>
+        <p class="eyebrow">AI PROVIDER TELEMETRY</p>
+        <h3>${escapeHtml(provider.label)}</h3>
+        <p>${provider.live ? 'Live compatible API call' : provider.tier === 'paid-simulated' ? 'Realistic paid-provider simulation' : 'Offline deterministic execution'}</p>
+      </div>
+      <div class="provider-stats">
+        <span><small>Model</small><strong>${escapeHtml(provider.model || '—')}</strong></span>
+        <span><small>Latency</small><strong>${provider.latencyMs ?? 0} ms</strong></span>
+        <span><small>Tokens</small><strong>${provider.promptTokens ?? 0} + ${provider.completionTokens ?? 0}</strong></span>
+        <span><small>Estimated cost</small><strong>${formatMoney(provider.estimatedCostUsd)}</strong></span>
+      </div>
+      ${provider.fallbackUsed ? `<div class="fallback-note"><strong>Fallback activated:</strong> ${escapeHtml((provider.attempts || []).join(' → ') || 'Upstream provider unavailable')}</div>` : ''}
     </div>
     <h3>Automation rationale</h3><p>${escapeHtml(item.rationale)}</p>
     <h3>Resident update</h3><p>${escapeHtml(item.residentMessage)}</p>
@@ -68,7 +110,9 @@ async function loadDashboard() {
   if (!response.ok) throw new Error('Unable to load dashboard');
   const data = await response.json();
   state.requests = data.requests;
+  state.providerStatus = data.providerStatus;
   renderMetrics(data.summary);
+  renderProviderHealth();
   renderRequests();
 }
 
@@ -82,7 +126,8 @@ async function createRequest(formData) {
   if (!response.ok) throw new Error(data.error || 'Unable to create request');
   await loadDashboard();
   showDetails(data);
-  toast(`Request ${data.id} triaged as ${data.priority}`);
+  const fallbackText = data.aiProvider?.fallbackUsed ? ' using fallback resilience' : '';
+  toast(`Request ${data.id} triaged by ${data.aiProvider?.label || 'local engine'}${fallbackText}`);
 }
 
 async function advanceRequest(id) {
@@ -98,17 +143,17 @@ function toast(message) {
   node.className = 'toast';
   node.textContent = message;
   document.body.append(node);
-  setTimeout(() => node.remove(), 2400);
+  setTimeout(() => node.remove(), 2800);
 }
 
 elements.form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const button = elements.form.querySelector('button[type="submit"]');
   button.disabled = true;
-  button.textContent = 'Running automation…';
+  button.textContent = 'Calling provider chain…';
   try { await createRequest(new FormData(elements.form)); }
   catch (error) { toast(error.message); }
-  finally { button.disabled = false; button.textContent = 'Run AI triage'; }
+  finally { button.disabled = false; button.textContent = 'Run resilient AI triage'; }
 });
 
 elements.list.addEventListener('click', async (event) => {
