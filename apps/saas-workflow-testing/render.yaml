@@ -9,3 +9,7 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: REVIEW_PROVIDER_MODE
+        value: simulated-paid
+      - key: AI_TIMEOUT_MS
+        value: 8000
