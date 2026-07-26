@@ -3,15 +3,31 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runWorkflowSuite, summarizeRuns, workflowDefinitions } from './engine.js';
+import { createSimulatedPaidReview, generateReviewWithFallback, getReviewProviderStatus } from './provider.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const publicDir = join(__dirname, 'public');
 const port = Number(process.env.PORT || 3000);
+
+function attachSeedReview(run, providerOverride = null) {
+  const review = createSimulatedPaidReview(run);
+  run.aiReview = review.narrative;
+  run.aiProvider = providerOverride || review.provider;
+  return run;
+}
+
 let sequence = 3;
 let runs = [
-  runWorkflowSuite({ workflowId: 'resident-maintenance', tenantId: 'tenant-harbor', fault: 'none' }, 3, new Date(Date.now() - 20 * 60_000)),
-  runWorkflowSuite({ workflowId: 'invoice-approval', tenantId: 'tenant-nova', fault: 'database-latency' }, 2, new Date(Date.now() - 74 * 60_000)),
-  runWorkflowSuite({ workflowId: 'support-intake', tenantId: 'tenant-acme', fault: 'tenant-scope-bypass' }, 1, new Date(Date.now() - 142 * 60_000))
+  attachSeedReview(runWorkflowSuite({ workflowId: 'resident-maintenance', tenantId: 'tenant-harbor', fault: 'none' }, 3, new Date(Date.now() - 20 * 60_000))),
+  attachSeedReview(runWorkflowSuite({ workflowId: 'invoice-approval', tenantId: 'tenant-nova', fault: 'database-latency' }, 2, new Date(Date.now() - 74 * 60_000)), {
+    id: 'free-review-live', label: 'Free-Tier Review API', tier: 'free', model: 'community-review-model', latencyMs: 904,
+    promptTokens: 1120, completionTokens: 322, estimatedCostUsd: 0, fallbackUsed: true, live: true, attempts: ['paid:not-configured']
+  }),
+  attachSeedReview(runWorkflowSuite({ workflowId: 'support-intake', tenantId: 'tenant-acme', fault: 'tenant-scope-bypass' }, 1, new Date(Date.now() - 142 * 60_000)), {
+    id: 'local-review-fallback', label: 'Local Review Fallback', tier: 'local', model: 'deterministic-review-v1', latencyMs: 2,
+    promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0, fallbackUsed: true, live: false,
+    attempts: ['paid:timeout', 'free:quota-exceeded']
+  })
 ];
 
 function json(res, statusCode, payload) {
@@ -31,6 +47,7 @@ async function readJson(req) {
 function overview() {
   return {
     summary: summarizeRuns(runs),
+    providerStatus: getReviewProviderStatus(),
     workflows: workflowDefinitions,
     runs: runs.slice(0, 8)
   };
@@ -56,7 +73,15 @@ export const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      return json(res, 200, { status: 'ok', service: 'saas-workflow-testing', timestamp: new Date().toISOString() });
+      return json(res, 200, {
+        status: 'ok',
+        service: 'saas-workflow-testing',
+        providers: getReviewProviderStatus(),
+        timestamp: new Date().toISOString()
+      });
+    }
+    if (req.method === 'GET' && url.pathname === '/api/providers') {
+      return json(res, 200, getReviewProviderStatus());
     }
     if (req.method === 'GET' && url.pathname === '/api/overview') {
       return json(res, 200, overview());
@@ -66,6 +91,9 @@ export const server = http.createServer(async (req, res) => {
       if (!input.workflowId || !input.tenantId) throw new Error('workflowId and tenantId are required');
       sequence += 1;
       const run = runWorkflowSuite(input, sequence);
+      const review = await generateReviewWithFallback(run, { mode: input.reviewProviderMode });
+      run.aiReview = review.narrative;
+      run.aiProvider = review.provider;
       runs.unshift(run);
       return json(res, 201, run);
     }
