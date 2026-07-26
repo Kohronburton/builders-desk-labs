@@ -1,0 +1,25 @@
+name: SaaS Workflow Testing Demo
+
+on:
+  push:
+    paths:
+      - 'apps/saas-workflow-testing/**'
+      - '.github/workflows/saas-workflow-testing.yml'
+  pull_request:
+    paths:
+      - 'apps/saas-workflow-testing/**'
+      - '.github/workflows/saas-workflow-testing.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/saas-workflow-testing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - run: docker build -t saas-workflow-testing .
