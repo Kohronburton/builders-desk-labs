@@ -44,10 +44,57 @@ async function readJson(req) {
   return body ? JSON.parse(body) : {};
 }
 
+function keySetupEnabled() {
+  return process.env.NODE_ENV !== 'production' || Boolean(process.env.ADMIN_SETUP_TOKEN);
+}
+
+function verifySetupToken(body) {
+  if (process.env.NODE_ENV !== 'production' && !process.env.ADMIN_SETUP_TOKEN) return true;
+  return Boolean(process.env.ADMIN_SETUP_TOKEN) && body.setupToken === process.env.ADMIN_SETUP_TOKEN;
+}
+
+function providerSetupStatus() {
+  const status = getReviewProviderStatus();
+  return {
+    ...status,
+    keySetupEnabled: keySetupEnabled(),
+    keySource: process.env.PAID_AI_API_KEY ? (process.env.RUNTIME_API_KEY_SET === 'true' ? 'session-memory' : 'environment') : 'none',
+    keyHint: process.env.PAID_AI_API_KEY ? `••••${process.env.PAID_AI_API_KEY.slice(-4)}` : null
+  };
+}
+
+function configureProvider(body) {
+  if (!verifySetupToken(body)) throw new Error('Invalid setup token');
+  const apiKey = String(body.apiKey || '').trim();
+  const baseUrl = String(body.baseUrl || 'https://api.openai.com/v1').trim().replace(/\/$/, '');
+  const model = String(body.model || 'gpt-4o-mini').trim();
+  if (apiKey.length < 12) throw new Error('Enter a valid API key');
+  if (!/^https:\/\//i.test(baseUrl)) throw new Error('Base URL must use HTTPS');
+  if (!model) throw new Error('Model is required');
+  process.env.PAID_AI_API_KEY = apiKey;
+  process.env.PAID_AI_BASE_URL = baseUrl;
+  process.env.PAID_AI_MODEL = model;
+  process.env.PAID_AI_LABEL = String(body.label || 'My OpenAI-Compatible API').slice(0, 80);
+  process.env.RUNTIME_API_KEY_SET = 'true';
+  return providerSetupStatus();
+}
+
+function clearRuntimeProvider(body) {
+  if (!verifySetupToken(body)) throw new Error('Invalid setup token');
+  if (process.env.RUNTIME_API_KEY_SET === 'true') {
+    delete process.env.PAID_AI_API_KEY;
+    delete process.env.PAID_AI_BASE_URL;
+    delete process.env.PAID_AI_MODEL;
+    delete process.env.PAID_AI_LABEL;
+    delete process.env.RUNTIME_API_KEY_SET;
+  }
+  return providerSetupStatus();
+}
+
 function overview() {
   return {
     summary: summarizeRuns(runs),
-    providerStatus: getReviewProviderStatus(),
+    providerStatus: providerSetupStatus(),
     workflows: workflowDefinitions,
     runs: runs.slice(0, 8)
   };
@@ -64,28 +111,17 @@ async function serveStatic(pathname, res) {
     res.writeHead(200, { 'content-type': types[extname(filePath)] || 'application/octet-stream' });
     res.end(data);
     return true;
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
 export const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    if (req.method === 'GET' && url.pathname === '/api/health') {
-      return json(res, 200, {
-        status: 'ok',
-        service: 'saas-workflow-testing',
-        providers: getReviewProviderStatus(),
-        timestamp: new Date().toISOString()
-      });
-    }
-    if (req.method === 'GET' && url.pathname === '/api/providers') {
-      return json(res, 200, getReviewProviderStatus());
-    }
-    if (req.method === 'GET' && url.pathname === '/api/overview') {
-      return json(res, 200, overview());
-    }
+    if (req.method === 'GET' && url.pathname === '/api/health') return json(res, 200, { status: 'ok', service: 'saas-workflow-testing', providers: providerSetupStatus(), timestamp: new Date().toISOString() });
+    if (req.method === 'GET' && url.pathname === '/api/providers') return json(res, 200, providerSetupStatus());
+    if (req.method === 'POST' && url.pathname === '/api/provider-config') return json(res, 200, configureProvider(await readJson(req)));
+    if (req.method === 'DELETE' && url.pathname === '/api/provider-config') return json(res, 200, clearRuntimeProvider(await readJson(req)));
+    if (req.method === 'GET' && url.pathname === '/api/overview') return json(res, 200, overview());
     if (req.method === 'POST' && url.pathname === '/api/test-runs') {
       const input = await readJson(req);
       if (!input.workflowId || !input.tenantId) throw new Error('workflowId and tenantId are required');
@@ -109,11 +145,7 @@ export const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && await serveStatic(url.pathname, res)) return;
     return json(res, 404, { error: 'Not found' });
-  } catch (error) {
-    return json(res, 400, { error: error.message || 'Request failed' });
-  }
+  } catch (error) { return json(res, 400, { error: error.message || 'Request failed' }); }
 });
 
-if (process.env.NODE_ENV !== 'test') {
-  server.listen(port, () => console.log(`Workflow testing demo listening on http://localhost:${port}`));
-}
+if (process.env.NODE_ENV !== 'test') server.listen(port, () => console.log(`Workflow testing demo listening on http://localhost:${port}`));
