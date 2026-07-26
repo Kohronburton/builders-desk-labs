@@ -71,8 +71,8 @@ export function createResidentMessage(request) {
   return `Hi ${request.residentName}, we received request ${request.id} for ${request.property}. ${windows[request.priority]}`;
 }
 
-export function makeRequest(input, id, now = new Date()) {
-  const classification = classifyRequest(input);
+export function makeRequest(input, id, now = new Date(), suppliedClassification = null) {
+  const classification = suppliedClassification || classifyRequest(input);
   const assignedTeam = routeRequest(input);
   const createdAt = now.toISOString();
   const dueAt = new Date(now.getTime() + classification.slaMinutes * 60_000).toISOString();
@@ -115,6 +115,11 @@ export function calculateSlaState(request, now = new Date()) {
 
 export function summarize(requests, now = new Date()) {
   const active = requests.filter((item) => item.status !== 'completed');
+  const providerCounts = requests.reduce((counts, item) => {
+    const tier = item.aiProvider?.tier || 'local';
+    counts[tier] = (counts[tier] || 0) + 1;
+    return counts;
+  }, {});
   return {
     total: requests.length,
     active: active.length,
@@ -123,6 +128,7 @@ export function summarize(requests, now = new Date()) {
     completed: requests.filter((item) => item.status === 'completed').length,
     avgAutomationConfidence: requests.length
       ? Math.round((requests.reduce((sum, item) => sum + item.confidence, 0) / requests.length) * 100)
-      : 0
+      : 0,
+    providerCounts
   };
 }
