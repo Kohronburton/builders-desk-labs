@@ -2,12 +2,7 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  calculateSlaState,
-  makeRequest,
-  nextStatus,
-  summarize
-} from './engine.js';
+import { calculateSlaState, makeRequest, nextStatus, summarize } from './engine.js';
 import { getProviderStatus, triageWithFallback } from './provider.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
@@ -15,22 +10,10 @@ const publicDir = join(__dirname, 'public');
 const port = Number(process.env.PORT || 3000);
 
 const initialInputs = [
-  {
-    residentName: 'Ana Torres', property: 'Bayline Residences', unit: '4B', category: 'Plumbing',
-    description: 'Active leak under the kitchen sink is spreading across the cabinet.'
-  },
-  {
-    residentName: 'Marcus Lee', property: 'Palm Court', unit: '12A', category: 'HVAC',
-    description: 'No AC since last night and the apartment is getting very hot.'
-  },
-  {
-    residentName: 'Sophia Grant', property: 'Harbor Point', unit: '2C', category: 'Safety',
-    description: 'Smoke and sparking coming from an outlet near the bedroom.'
-  },
-  {
-    residentName: 'Diego Ruiz', property: 'Bayline Residences', unit: '7D', category: 'General',
-    description: 'Closet door is off the track and needs adjustment.'
-  }
+  { residentName: 'Ana Torres', property: 'Bayline Residences', unit: '4B', category: 'Plumbing', description: 'Active leak under the kitchen sink is spreading across the cabinet.' },
+  { residentName: 'Marcus Lee', property: 'Palm Court', unit: '12A', category: 'HVAC', description: 'No AC since last night and the apartment is getting very hot.' },
+  { residentName: 'Sophia Grant', property: 'Harbor Point', unit: '2C', category: 'Safety', description: 'Smoke and sparking coming from an outlet near the bedroom.' },
+  { residentName: 'Diego Ruiz', property: 'Bayline Residences', unit: '7D', category: 'General', description: 'Closet door is off the track and needs adjustment.' }
 ];
 
 const seedProviders = [
@@ -57,10 +40,7 @@ requests[1].status = 'scheduled';
 requests[3].status = 'completed';
 
 function json(res, statusCode, payload) {
-  res.writeHead(statusCode, {
-    'content-type': 'application/json; charset=utf-8',
-    'cache-control': 'no-store'
-  });
+  res.writeHead(statusCode, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
   res.end(JSON.stringify(payload));
 }
 
@@ -79,14 +59,59 @@ function validateInput(input) {
   if (missing.length) throw new Error(`Missing required fields: ${missing.join(', ')}`);
 }
 
-function withDerived(item) {
-  return { ...item, slaState: calculateSlaState(item) };
+function keySetupEnabled() {
+  return process.env.NODE_ENV !== 'production' || Boolean(process.env.ADMIN_SETUP_TOKEN);
 }
+
+function verifySetupToken(body) {
+  if (process.env.NODE_ENV !== 'production' && !process.env.ADMIN_SETUP_TOKEN) return true;
+  return Boolean(process.env.ADMIN_SETUP_TOKEN) && body.setupToken === process.env.ADMIN_SETUP_TOKEN;
+}
+
+function providerSetupStatus() {
+  const status = getProviderStatus();
+  return {
+    ...status,
+    keySetupEnabled: keySetupEnabled(),
+    keySource: process.env.PAID_AI_API_KEY ? (process.env.RUNTIME_API_KEY_SET === 'true' ? 'session-memory' : 'environment') : 'none',
+    keyHint: process.env.PAID_AI_API_KEY ? `••••${process.env.PAID_AI_API_KEY.slice(-4)}` : null
+  };
+}
+
+function configureProvider(body) {
+  if (!verifySetupToken(body)) throw new Error('Invalid setup token');
+  const apiKey = String(body.apiKey || '').trim();
+  const baseUrl = String(body.baseUrl || 'https://api.openai.com/v1').trim().replace(/\/$/, '');
+  const model = String(body.model || 'gpt-4o-mini').trim();
+  if (apiKey.length < 12) throw new Error('Enter a valid API key');
+  if (!/^https:\/\//i.test(baseUrl)) throw new Error('Base URL must use HTTPS');
+  if (!model) throw new Error('Model is required');
+  process.env.PAID_AI_API_KEY = apiKey;
+  process.env.PAID_AI_BASE_URL = baseUrl;
+  process.env.PAID_AI_MODEL = model;
+  process.env.PAID_AI_LABEL = String(body.label || 'My OpenAI-Compatible API').slice(0, 80);
+  process.env.RUNTIME_API_KEY_SET = 'true';
+  return providerSetupStatus();
+}
+
+function clearRuntimeProvider(body) {
+  if (!verifySetupToken(body)) throw new Error('Invalid setup token');
+  if (process.env.RUNTIME_API_KEY_SET === 'true') {
+    delete process.env.PAID_AI_API_KEY;
+    delete process.env.PAID_AI_BASE_URL;
+    delete process.env.PAID_AI_MODEL;
+    delete process.env.PAID_AI_LABEL;
+    delete process.env.RUNTIME_API_KEY_SET;
+  }
+  return providerSetupStatus();
+}
+
+function withDerived(item) { return { ...item, slaState: calculateSlaState(item) }; }
 
 function dashboard() {
   return {
     summary: summarize(requests),
-    providerStatus: getProviderStatus(),
+    providerStatus: providerSetupStatus(),
     requests: requests.map(withDerived).sort((a, b) => {
       const priority = { emergency: 0, urgent: 1, routine: 2 };
       return priority[a.priority] - priority[b.priority] || new Date(a.dueAt) - new Date(b.dueAt);
@@ -101,37 +126,21 @@ async function serveStatic(pathname, res) {
   if (!filePath.startsWith(publicDir)) return false;
   try {
     const data = await readFile(filePath);
-    const types = {
-      '.html': 'text/html; charset=utf-8',
-      '.css': 'text/css; charset=utf-8',
-      '.js': 'text/javascript; charset=utf-8',
-      '.svg': 'image/svg+xml'
-    };
+    const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.svg': 'image/svg+xml' };
     res.writeHead(200, { 'content-type': types[extname(filePath)] || 'application/octet-stream' });
     res.end(data);
     return true;
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
 export const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    if (req.method === 'GET' && url.pathname === '/api/health') {
-      return json(res, 200, {
-        status: 'ok',
-        service: 'property-management-automation',
-        providers: getProviderStatus(),
-        timestamp: new Date().toISOString()
-      });
-    }
-    if (req.method === 'GET' && url.pathname === '/api/providers') {
-      return json(res, 200, getProviderStatus());
-    }
-    if (req.method === 'GET' && url.pathname === '/api/dashboard') {
-      return json(res, 200, dashboard());
-    }
+    if (req.method === 'GET' && url.pathname === '/api/health') return json(res, 200, { status: 'ok', service: 'property-management-automation', providers: providerSetupStatus(), timestamp: new Date().toISOString() });
+    if (req.method === 'GET' && url.pathname === '/api/providers') return json(res, 200, providerSetupStatus());
+    if (req.method === 'POST' && url.pathname === '/api/provider-config') return json(res, 200, configureProvider(await readJson(req)));
+    if (req.method === 'DELETE' && url.pathname === '/api/provider-config') return json(res, 200, clearRuntimeProvider(await readJson(req)));
+    if (req.method === 'GET' && url.pathname === '/api/dashboard') return json(res, 200, dashboard());
     if (req.method === 'POST' && url.pathname === '/api/requests') {
       const input = await readJson(req);
       validateInput(input);
@@ -151,9 +160,7 @@ export const server = http.createServer(async (req, res) => {
       const previous = request.status;
       request.status = nextStatus(request.status);
       request.updatedAt = new Date().toISOString();
-      if (request.status !== previous) {
-        request.timeline.push({ at: request.updatedAt, label: `Status advanced to ${request.status.replaceAll('_', ' ')}` });
-      }
+      if (request.status !== previous) request.timeline.push({ at: request.updatedAt, label: `Status advanced to ${request.status.replaceAll('_', ' ')}` });
       return json(res, 200, withDerived(request));
     }
     if (req.method === 'POST' && url.pathname === '/api/reset') {
@@ -167,13 +174,7 @@ export const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && await serveStatic(url.pathname, res)) return;
     return json(res, 404, { error: 'Not found' });
-  } catch (error) {
-    return json(res, 400, { error: error.message || 'Request failed' });
-  }
+  } catch (error) { return json(res, 400, { error: error.message || 'Request failed' }); }
 });
 
-if (process.env.NODE_ENV !== 'test') {
-  server.listen(port, () => {
-    console.log(`Property automation demo listening on http://localhost:${port}`);
-  });
-}
+if (process.env.NODE_ENV !== 'test') server.listen(port, () => console.log(`Property automation demo listening on http://localhost:${port}`));
