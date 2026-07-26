@@ -14,20 +14,33 @@
       <nav aria-label="Primary navigation">
         <a class="active" href="#operations">Command Center</a>
         <a href="#requests">Maintenance Queue</a>
-        <a href="#automation">Automation Rules</a>
+        <a href="#automation">AI Intake</a>
+        <a href="#providers">Provider Resilience</a>
         <a href="#health">System Health</a>
       </nav>
       <div class="system-card" id="health">
         <span class="status-dot"></span>
-        <div><strong>Automation online</strong><small>Rules engine + API healthy</small></div>
+        <div><strong>Automation online</strong><small>Paid simulation + free fallback + local engine</small></div>
       </div>
     </aside>
 
     <main>
       <header class="topbar">
-        <div><p class="eyebrow">LIVE OPERATIONS DEMO</p><h1>Maintenance Command Center</h1><p>Centralized intake, intelligent triage, vendor routing, SLA control, and resident updates.</p></div>
+        <div>
+          <p class="eyebrow">LIVE OPERATIONS DEMO</p>
+          <h1>Maintenance Command Center</h1>
+          <p>Centralized intake, intelligent triage, vendor routing, SLA control, resident updates, and failure-safe AI provider switching.</p>
+        </div>
         <button class="secondary" id="resetButton" type="button">Reset demo</button>
       </header>
+
+      <section class="hero-strip" id="providers">
+        <div>
+          <span class="hero-icon">AI</span>
+          <div><strong>Provider-resilient automation</strong><p>Demonstrate a premium model, call a configured free-tier API, or fall back locally with no broken workflow.</p></div>
+        </div>
+        <div class="provider-health" id="providerHealth" aria-live="polite"></div>
+      </section>
 
       <section class="metrics" id="operations" aria-label="Operations summary">
         <article><span>Active requests</span><strong id="metricActive">—</strong><small>Across managed properties</small></article>
@@ -49,8 +62,16 @@
         </div>
 
         <div class="panel intake-panel" id="automation">
-          <div class="panel-heading"><div><p class="eyebrow">AI INTAKE</p><h2>Create request</h2></div></div>
+          <div class="panel-heading"><div><p class="eyebrow">AI INTAKE</p><h2>Create request</h2></div><span class="live-chip">Fallback-safe</span></div>
           <form id="requestForm">
+            <label>AI provider strategy
+              <select name="providerMode" id="providerMode">
+                <option value="simulated-paid">Premium AI simulation</option>
+                <option value="auto">Live paid API → free API → local fallback</option>
+                <option value="free-first">Free API → paid API → local fallback</option>
+                <option value="local">Local deterministic engine</option>
+              </select>
+            </label>
             <label>Resident name<input name="residentName" value="Jordan Ellis" required></label>
             <div class="two-col">
               <label>Property<input name="property" value="Palm Court" required></label>
@@ -58,11 +79,11 @@
             </div>
             <label>Category<select name="category" required><option>Plumbing</option><option>HVAC</option><option>Electrical</option><option>Safety</option><option>Access</option><option>Appliance</option><option>General</option></select></label>
             <label>Description<textarea name="description" rows="4" required>Water is leaking quickly from the ceiling near the light fixture.</textarea></label>
-            <button class="primary" type="submit">Run AI triage</button>
+            <button class="primary" type="submit">Run resilient AI triage</button>
           </form>
           <div class="automation-preview" id="automationPreview">
             <span class="icon">↗</span>
-            <div><strong>Automated workflow</strong><p>Classify urgency → assign team → set SLA → draft resident update → flag owner approval.</p></div>
+            <div><strong>Automated workflow</strong><p>Classify urgency → record provider telemetry → assign team → set SLA → draft resident update → continue even if an API fails.</p></div>
           </div>
         </div>
       </section>
