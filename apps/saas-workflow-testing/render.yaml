@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: builders-desk-flowguard-qa
+    runtime: docker
+    rootDir: apps/saas-workflow-testing
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
