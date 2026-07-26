@@ -6,39 +6,24 @@
   <meta name="description" content="AI-powered property management maintenance automation demo.">
   <title>PropertyFlow AI | Builder's Desk Labs</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/provider-setup.css">
 </head>
 <body>
   <div class="shell">
     <aside class="sidebar">
       <div class="brand"><span class="brand-mark">BD</span><div><strong>Builder's Desk Labs</strong><small>PropertyFlow AI</small></div></div>
-      <nav aria-label="Primary navigation">
-        <a class="active" href="#operations">Command Center</a>
-        <a href="#requests">Maintenance Queue</a>
-        <a href="#automation">AI Intake</a>
-        <a href="#providers">Provider Resilience</a>
-        <a href="#health">System Health</a>
-      </nav>
-      <div class="system-card" id="health">
-        <span class="status-dot"></span>
-        <div><strong>Automation online</strong><small>Paid simulation + free fallback + local engine</small></div>
-      </div>
+      <nav aria-label="Primary navigation"><a class="active" href="#operations">Command Center</a><a href="#requests">Maintenance Queue</a><a href="#automation">AI Intake</a><a href="#providers">Provider Resilience</a><a href="#health">System Health</a></nav>
+      <div class="system-card" id="health"><span class="status-dot"></span><div><strong>Automation online</strong><small>Paid simulation + free fallback + local engine</small></div></div>
     </aside>
 
     <main>
       <header class="topbar">
-        <div>
-          <p class="eyebrow">LIVE OPERATIONS DEMO</p>
-          <h1>Maintenance Command Center</h1>
-          <p>Centralized intake, intelligent triage, vendor routing, SLA control, resident updates, and failure-safe AI provider switching.</p>
-        </div>
-        <button class="secondary" id="resetButton" type="button">Reset demo</button>
+        <div><p class="eyebrow">LIVE OPERATIONS DEMO</p><h1>Maintenance Command Center</h1><p>Centralized intake, intelligent triage, vendor routing, SLA control, resident updates, and failure-safe AI provider switching.</p></div>
+        <div class="header-actions"><button class="secondary" id="openProviderSetup" type="button">Connect AI key</button><button class="secondary" id="resetButton" type="button">Reset demo</button></div>
       </header>
 
       <section class="hero-strip" id="providers">
-        <div>
-          <span class="hero-icon">AI</span>
-          <div><strong>Provider-resilient automation</strong><p>Demonstrate a premium model, call a configured free-tier API, or fall back locally with no broken workflow.</p></div>
-        </div>
+        <div><span class="hero-icon">AI</span><div><strong>Provider-resilient automation</strong><p>Demonstrate a premium model, call your OpenAI-compatible API, or fall back locally with no broken workflow.</p></div></div>
         <div class="provider-health" id="providerHealth" aria-live="polite"></div>
       </section>
 
@@ -52,48 +37,45 @@
       <section class="workspace">
         <div class="panel queue-panel" id="requests">
           <div class="panel-heading"><div><p class="eyebrow">WORKSPACE</p><h2>Maintenance queue</h2></div><span class="live-chip">Live</span></div>
-          <div class="filter-row" role="group" aria-label="Filter requests">
-            <button class="filter active" data-filter="all" type="button">All</button>
-            <button class="filter" data-filter="emergency" type="button">Emergency</button>
-            <button class="filter" data-filter="urgent" type="button">Urgent</button>
-            <button class="filter" data-filter="routine" type="button">Routine</button>
-          </div>
+          <div class="filter-row" role="group" aria-label="Filter requests"><button class="filter active" data-filter="all" type="button">All</button><button class="filter" data-filter="emergency" type="button">Emergency</button><button class="filter" data-filter="urgent" type="button">Urgent</button><button class="filter" data-filter="routine" type="button">Routine</button></div>
           <div id="requestList" class="request-list" aria-live="polite"></div>
         </div>
 
         <div class="panel intake-panel" id="automation">
           <div class="panel-heading"><div><p class="eyebrow">AI INTAKE</p><h2>Create request</h2></div><span class="live-chip">Fallback-safe</span></div>
           <form id="requestForm">
-            <label>AI provider strategy
-              <select name="providerMode" id="providerMode">
-                <option value="simulated-paid">Premium AI simulation</option>
-                <option value="auto">Live paid API → free API → local fallback</option>
-                <option value="free-first">Free API → paid API → local fallback</option>
-                <option value="local">Local deterministic engine</option>
-              </select>
-            </label>
+            <label>AI provider strategy<select name="providerMode" id="providerMode"><option value="simulated-paid">Premium AI simulation</option><option value="auto">My API → free API → local fallback</option><option value="free-first">Free API → my API → local fallback</option><option value="local">Local deterministic engine</option></select></label>
             <label>Resident name<input name="residentName" value="Jordan Ellis" required></label>
-            <div class="two-col">
-              <label>Property<input name="property" value="Palm Court" required></label>
-              <label>Unit<input name="unit" value="8F" required></label>
-            </div>
+            <div class="two-col"><label>Property<input name="property" value="Palm Court" required></label><label>Unit<input name="unit" value="8F" required></label></div>
             <label>Category<select name="category" required><option>Plumbing</option><option>HVAC</option><option>Electrical</option><option>Safety</option><option>Access</option><option>Appliance</option><option>General</option></select></label>
             <label>Description<textarea name="description" rows="4" required>Water is leaking quickly from the ceiling near the light fixture.</textarea></label>
             <button class="primary" type="submit">Run resilient AI triage</button>
           </form>
-          <div class="automation-preview" id="automationPreview">
-            <span class="icon">↗</span>
-            <div><strong>Automated workflow</strong><p>Classify urgency → record provider telemetry → assign team → set SLA → draft resident update → continue even if an API fails.</p></div>
-          </div>
+          <div class="automation-preview"><span class="icon">↗</span><div><strong>Automated workflow</strong><p>Classify urgency → record provider telemetry → assign team → set SLA → draft resident update → continue even if an API fails.</p></div></div>
         </div>
       </section>
 
-      <dialog id="detailDialog">
-        <button class="dialog-close" id="closeDialog" aria-label="Close details" type="button">×</button>
-        <div id="detailContent"></div>
+      <dialog id="detailDialog"><button class="dialog-close" id="closeDialog" aria-label="Close details" type="button">×</button><div id="detailContent"></div></dialog>
+
+      <dialog id="providerSetupDialog" class="provider-setup-dialog">
+        <button class="dialog-close" id="closeProviderSetup" aria-label="Close provider setup" type="button">×</button>
+        <p class="eyebrow">DEMO STANDARD</p><h2>Connect your AI provider</h2>
+        <p class="setup-copy">The key is sent over HTTPS, kept only in this server process, never returned to the browser, and erased whenever the service restarts.</p>
+        <div id="providerSetupStatus" class="setup-status" aria-live="polite"></div>
+        <form id="providerSetupForm" class="provider-setup-form">
+          <label>API key<input type="password" name="apiKey" autocomplete="off" placeholder="sk-…" required></label>
+          <label>Base URL<input name="baseUrl" value="https://api.openai.com/v1" required></label>
+          <label>Model<input name="model" value="gpt-4o-mini" required></label>
+          <label>Provider label<input name="label" value="My OpenAI-Compatible API"></label>
+          <label>Setup token<input type="password" name="setupToken" autocomplete="off" placeholder="Value of ADMIN_SETUP_TOKEN" required></label>
+          <button class="primary" type="submit">Save secure session key</button>
+          <button class="secondary danger-button" id="clearProviderSetup" type="button">Remove session key</button>
+        </form>
+        <p class="setup-note"><strong>Production standard:</strong> store permanent keys in Render Environment. This panel is for controlled demos and temporary testing.</p>
       </dialog>
     </main>
   </div>
   <script type="module" src="/app.js"></script>
+  <script type="module" src="/provider-setup.js"></script>
 </body>
 </html>
