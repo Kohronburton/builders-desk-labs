@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AI-powered property management maintenance automation demo.">
+  <title>PropertyFlow AI | Builder's Desk Labs</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">BD</span><div><strong>Builder's Desk Labs</strong><small>PropertyFlow AI</small></div></div>
+      <nav aria-label="Primary navigation">
+        <a class="active" href="#operations">Command Center</a>
+        <a href="#requests">Maintenance Queue</a>
+        <a href="#automation">Automation Rules</a>
+        <a href="#health">System Health</a>
+      </nav>
+      <div class="system-card" id="health">
+        <span class="status-dot"></span>
+        <div><strong>Automation online</strong><small>Rules engine + API healthy</small></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div><p class="eyebrow">LIVE OPERATIONS DEMO</p><h1>Maintenance Command Center</h1><p>Centralized intake, intelligent triage, vendor routing, SLA control, and resident updates.</p></div>
+        <button class="secondary" id="resetButton" type="button">Reset demo</button>
+      </header>
+
+      <section class="metrics" id="operations" aria-label="Operations summary">
+        <article><span>Active requests</span><strong id="metricActive">—</strong><small>Across managed properties</small></article>
+        <article><span>Emergencies</span><strong id="metricEmergency">—</strong><small>Immediate response queue</small></article>
+        <article><span>SLA risk</span><strong id="metricRisk">—</strong><small>At risk or breached</small></article>
+        <article><span>AI confidence</span><strong id="metricConfidence">—</strong><small>Average classification score</small></article>
+      </section>
+
+      <section class="workspace">
+        <div class="panel queue-panel" id="requests">
+          <div class="panel-heading"><div><p class="eyebrow">WORKSPACE</p><h2>Maintenance queue</h2></div><span class="live-chip">Live</span></div>
+          <div class="filter-row" role="group" aria-label="Filter requests">
+            <button class="filter active" data-filter="all" type="button">All</button>
+            <button class="filter" data-filter="emergency" type="button">Emergency</button>
+            <button class="filter" data-filter="urgent" type="button">Urgent</button>
+            <button class="filter" data-filter="routine" type="button">Routine</button>
+          </div>
+          <div id="requestList" class="request-list" aria-live="polite"></div>
+        </div>
+
+        <div class="panel intake-panel" id="automation">
+          <div class="panel-heading"><div><p class="eyebrow">AI INTAKE</p><h2>Create request</h2></div></div>
+          <form id="requestForm">
+            <label>Resident name<input name="residentName" value="Jordan Ellis" required></label>
+            <div class="two-col">
+              <label>Property<input name="property" value="Palm Court" required></label>
+              <label>Unit<input name="unit" value="8F" required></label>
+            </div>
+            <label>Category<select name="category" required><option>Plumbing</option><option>HVAC</option><option>Electrical</option><option>Safety</option><option>Access</option><option>Appliance</option><option>General</option></select></label>
+            <label>Description<textarea name="description" rows="4" required>Water is leaking quickly from the ceiling near the light fixture.</textarea></label>
+            <button class="primary" type="submit">Run AI triage</button>
+          </form>
+          <div class="automation-preview" id="automationPreview">
+            <span class="icon">↗</span>
+            <div><strong>Automated workflow</strong><p>Classify urgency → assign team → set SLA → draft resident update → flag owner approval.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <dialog id="detailDialog">
+        <button class="dialog-close" id="closeDialog" aria-label="Close details" type="button">×</button>
+        <div id="detailContent"></div>
+      </dialog>
+    </main>
+  </div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
