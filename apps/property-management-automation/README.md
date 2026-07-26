@@ -4,13 +4,49 @@ A production-minded, independently deployable demo for property-management maint
 
 ## Demo story
 
-1. Submit a maintenance request from the intake panel.
-2. The rules-backed AI triage engine assigns emergency, urgent, or routine priority with a confidence score and rationale.
-3. The request is routed to the appropriate vendor team.
-4. An SLA deadline, resident message, approval flag, and audit timeline are generated.
-5. Operations staff can filter requests, inspect automation details, and advance workflow state.
+1. Select a provider strategy: premium simulation, live provider chain, free-first, or local.
+2. Submit a maintenance request from the intake panel.
+3. The AI layer assigns emergency, urgent, or routine priority with confidence, rationale, SLA, and provider telemetry.
+4. The request is routed to the appropriate vendor team.
+5. An SLA deadline, resident message, approval flag, provider audit event, and workflow timeline are generated.
+6. Operations staff can filter requests, inspect token/cost/latency metadata, see fallback attempts, and advance workflow state.
 
-The demo uses synthetic data and runs without paid APIs or external services. The deterministic engine makes the portfolio demo reliable while leaving a clear seam for an LLM classifier, AppFolio/Yardi integration, messaging provider, database, or queue.
+The demo uses synthetic data. It works with no keys, can call any configured OpenAI-compatible endpoint, and always retains a deterministic offline fallback.
+
+## Provider modes
+
+- `simulated-paid`: presentation-safe premium provider simulation with realistic model, token, latency, and estimated-cost telemetry. No network call.
+- `auto`: paid endpoint first, free endpoint second, deterministic local engine last.
+- `free-first`: free endpoint first, paid endpoint second, deterministic local engine last.
+- `local`: deterministic rules only.
+
+The selected mode can be changed directly in the UI for each request.
+
+## Configure a free API fallback
+
+Set these environment variables in Render or `.env`:
+
+```bash
+FREE_AI_BASE_URL=https://your-openai-compatible-provider.example/v1
+FREE_AI_API_KEY=your-key
+FREE_AI_MODEL=your-provider-model-id
+FREE_AI_LABEL=Free-Tier OpenAI-Compatible API
+```
+
+Use the provider's API base URL **without** `/chat/completions`; the app appends that path automatically.
+
+Set `AI_PROVIDER_MODE=auto` to prefer a configured paid provider and fall back to free, or `AI_PROVIDER_MODE=free-first` to try the free provider first. Even if the free service times out, rejects the request, or has no remaining quota, intake continues through the local engine.
+
+Optional paid provider variables use the same contract:
+
+```bash
+PAID_AI_BASE_URL=https://your-paid-provider.example/v1
+PAID_AI_API_KEY=your-key
+PAID_AI_MODEL=your-model-id
+PAID_AI_LABEL=Paid OpenAI-Compatible API
+```
+
+Do not expose keys in client-side code. All provider calls are made by the Node server.
 
 ## Run locally
 
@@ -27,9 +63,12 @@ Open `http://localhost:3000`.
 npm test
 ```
 
+Tests cover local triage, provider-supplied structured output, premium simulation, unconfigured-provider fallback, configured free-compatible responses, and secret-safe provider status.
+
 ## API
 
 - `GET /api/health`
+- `GET /api/providers`
 - `GET /api/dashboard`
 - `POST /api/requests`
 - `POST /api/requests/:id/advance`
@@ -41,9 +80,13 @@ npm test
 
 Create a new Blueprint from the repository and point Render to this branch's `apps/property-management-automation/render.yaml`, or create a Web Service with:
 
+- Branch: `agent/property-management-automation`
 - Root directory: `apps/property-management-automation`
 - Runtime: Docker
+- Dockerfile path: `./Dockerfile`
 - Health check: `/api/health`
+
+No API variables are required for the default premium simulation. Add the `FREE_AI_*` variables only when you are ready to connect a free-compatible provider.
 
 ### Docker
 
@@ -58,6 +101,6 @@ docker run --rm -p 3000:3000 propertyflow-ai
 - Vendor directory, estimates, approvals, and scheduling
 - SMS/email notifications with delivery tracking
 - AppFolio, PropertyWare, or Yardi adapters
-- Queue-backed retries and escalation timers
-- LLM classification with structured-output validation and deterministic fallback
+- Queue-backed retries, circuit breakers, and escalation timers
+- Provider-specific adapters, structured-output validation, and cost budgets
 - Audit logs, role permissions, and portfolio-level reporting
