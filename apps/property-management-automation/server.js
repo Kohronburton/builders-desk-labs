@@ -8,6 +8,7 @@ import {
   nextStatus,
   summarize
 } from './engine.js';
+import { getProviderStatus, triageWithFallback } from './provider.js';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const publicDir = join(__dirname, 'public');
@@ -32,11 +33,24 @@ const initialInputs = [
   }
 ];
 
+const seedProviders = [
+  { id: 'premium-sim', label: 'Premium AI Simulation', tier: 'paid-simulated', model: 'enterprise-triage-v2', latencyMs: 486, promptTokens: 132, completionTokens: 56, estimatedCostUsd: 0.00047, fallbackUsed: false, live: false },
+  { id: 'free-live', label: 'Free-Tier API', tier: 'free', model: 'community-instruct', latencyMs: 712, promptTokens: 124, completionTokens: 51, estimatedCostUsd: 0, fallbackUsed: true, live: true },
+  { id: 'premium-sim', label: 'Premium AI Simulation', tier: 'paid-simulated', model: 'enterprise-triage-v2', latencyMs: 441, promptTokens: 139, completionTokens: 56, estimatedCostUsd: 0.00049, fallbackUsed: false, live: false },
+  { id: 'local-fallback', label: 'Local Fallback Engine', tier: 'local', model: 'deterministic-v1', latencyMs: 1, promptTokens: 0, completionTokens: 0, estimatedCostUsd: 0, fallbackUsed: true, live: false }
+];
+
+function buildSeedRequests() {
+  return initialInputs.map((input, index) => {
+    const request = makeRequest(input, `MR-${1001 + index}`, new Date(Date.now() - (index + 1) * 17 * 60_000));
+    request.aiProvider = seedProviders[index];
+    request.timeline.push({ at: request.createdAt, label: `AI provider: ${request.aiProvider.label}` });
+    return request;
+  });
+}
+
 let sequence = 1004;
-let requests = initialInputs.map((input, index) => {
-  const now = new Date(Date.now() - (index + 1) * 17 * 60_000);
-  return makeRequest(input, `MR-${1001 + index}`, now);
-});
+let requests = buildSeedRequests();
 requests[0].status = 'vendor_assigned';
 requests[0].estimateAmount = 285;
 requests[1].status = 'scheduled';
@@ -72,6 +86,7 @@ function withDerived(item) {
 function dashboard() {
   return {
     summary: summarize(requests),
+    providerStatus: getProviderStatus(),
     requests: requests.map(withDerived).sort((a, b) => {
       const priority = { emergency: 0, urgent: 1, routine: 2 };
       return priority[a.priority] - priority[b.priority] || new Date(a.dueAt) - new Date(b.dueAt);
@@ -104,7 +119,15 @@ export const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     if (req.method === 'GET' && url.pathname === '/api/health') {
-      return json(res, 200, { status: 'ok', service: 'property-management-automation', timestamp: new Date().toISOString() });
+      return json(res, 200, {
+        status: 'ok',
+        service: 'property-management-automation',
+        providers: getProviderStatus(),
+        timestamp: new Date().toISOString()
+      });
+    }
+    if (req.method === 'GET' && url.pathname === '/api/providers') {
+      return json(res, 200, getProviderStatus());
     }
     if (req.method === 'GET' && url.pathname === '/api/dashboard') {
       return json(res, 200, dashboard());
@@ -112,8 +135,12 @@ export const server = http.createServer(async (req, res) => {
     if (req.method === 'POST' && url.pathname === '/api/requests') {
       const input = await readJson(req);
       validateInput(input);
+      const triage = await triageWithFallback(input, { mode: input.providerMode });
       sequence += 1;
-      const request = makeRequest(input, `MR-${sequence}`);
+      const request = makeRequest(input, `MR-${sequence}`, new Date(), triage.classification);
+      request.aiProvider = triage.provider;
+      request.timeline.push({ at: request.createdAt, label: `AI provider: ${triage.provider.label}` });
+      if (triage.provider.fallbackUsed) request.timeline.push({ at: request.createdAt, label: 'Fallback path activated without interrupting intake' });
       requests.unshift(request);
       return json(res, 201, withDerived(request));
     }
@@ -131,7 +158,11 @@ export const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'POST' && url.pathname === '/api/reset') {
       sequence = 1004;
-      requests = initialInputs.map((input, index) => makeRequest(input, `MR-${1001 + index}`, new Date(Date.now() - (index + 1) * 17 * 60_000)));
+      requests = buildSeedRequests();
+      requests[0].status = 'vendor_assigned';
+      requests[0].estimateAmount = 285;
+      requests[1].status = 'scheduled';
+      requests[3].status = 'completed';
       return json(res, 200, dashboard());
     }
     if (req.method === 'GET' && await serveStatic(url.pathname, res)) return;
