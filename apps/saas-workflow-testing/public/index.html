@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Multi-tenant SaaS workflow testing and code-review demo.">
+  <title>FlowGuard QA | Builder's Desk Labs</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/provider-setup.css">
+</head>
+<body>
+  <div class="shell">
+    <aside>
+      <div class="brand"><span>BD</span><div><strong>Builder's Desk Labs</strong><small>FlowGuard QA</small></div></div>
+      <nav><a class="active" href="#overview">Reliability Overview</a><a href="#runner">Test Runner</a><a href="#ai-review">AI Review</a><a href="#findings">Findings</a><a href="#trace">Execution Trace</a></nav>
+      <div class="health"><i></i><div><strong>Assurance environment ready</strong><small>Premium simulation + free fallback + local review</small></div></div>
+    </aside>
+    <main>
+      <header>
+        <div><p class="eyebrow">MULTI-TENANT WORKFLOW ASSURANCE</p><h1>Workflow Reliability Cockpit</h1><p>Exercise branching, triggers, actions, SLA timers, retries, permissions, tenant isolation, and failure recovery—then convert evidence into an executive release decision.</p></div>
+        <div class="header-actions"><button id="openProviderSetup" class="ghost" type="button">Connect AI key</button><button id="reset" class="ghost" type="button">Clear runs</button></div>
+      </header>
+
+      <section class="provider-banner">
+        <div><span class="provider-logo">AI</span><div><strong>Resilient engineering-review chain</strong><p>Premium review simulation, your OpenAI-compatible API, optional free-tier analysis, and deterministic local fallback.</p></div></div>
+        <div id="providerHealth" class="provider-health" aria-live="polite"></div>
+      </section>
+
+      <section id="overview" class="metrics">
+        <article><span>Latest reliability</span><strong id="score">—</strong><small>Weighted suite score</small></article>
+        <article><span>Run pass rate</span><strong id="passRate">—</strong><small>Clean test executions</small></article>
+        <article><span>Critical findings</span><strong id="critical">—</strong><small>Security or isolation</small></article>
+        <article><span>Open findings</span><strong id="openFindings">—</strong><small>Across recent runs</small></article>
+      </section>
+
+      <section class="grid">
+        <div class="panel runner" id="runner">
+          <div class="panel-title"><div><p class="eyebrow">TEST RUNNER</p><h2>Execute workflow suite</h2></div><span class="chip">10 checks</span></div>
+          <form id="runForm">
+            <div class="form-grid"><label>Workflow<select name="workflowId" id="workflowSelect"></select></label><label>Tenant fixture<select name="tenantId"><option value="tenant-acme">Acme Services</option><option value="tenant-nova">Nova Operations</option><option value="tenant-harbor">Harbor Property Group</option></select></label></div>
+            <label>Fault injection<select name="fault"><option value="none">No fault — baseline</option><option value="webhook-timeout">Webhook timeout + retry exhaustion</option><option value="tenant-scope-bypass">Tenant scope bypass</option><option value="duplicate-event">Duplicate queue delivery</option><option value="database-latency">Database latency</option><option value="branch-regression">Branch permission regression</option></select></label>
+            <label>AI review provider<select name="reviewProviderMode"><option value="simulated-paid">Premium engineering-review simulation</option><option value="auto">My API → free API → local fallback</option><option value="free-first">Free API → my API → local fallback</option><option value="local">Local deterministic review</option></select></label>
+            <button class="primary" type="submit">Run suite + generate AI review</button>
+          </form>
+          <div id="workflowMap" class="workflow-map" aria-label="Selected workflow nodes"></div>
+        </div>
+
+        <div class="panel history"><div class="panel-title"><div><p class="eyebrow">RECENT RUNS</p><h2>Execution history</h2></div></div><div id="runList" class="run-list"></div></div>
+      </section>
+
+      <section class="panel ai-review-panel" id="ai-review">
+        <div class="panel-title"><div><p class="eyebrow">EXECUTIVE AI REVIEW</p><h2 id="reviewTitle">Select or run a suite</h2></div><span id="releaseDecision" class="decision neutral">Awaiting evidence</span></div>
+        <div id="reviewProvider" class="review-provider"></div>
+        <div id="reviewBody" class="review-grid"><div class="empty">The AI review will turn technical test evidence into release guidance, business risk, likely root cause, and a prioritized repair plan.</div></div>
+      </section>
+
+      <section class="panel results-panel"><div class="panel-title"><div><p class="eyebrow">LATEST EVIDENCE</p><h2 id="resultTitle">Select or run a suite</h2></div><span id="runStatus" class="chip neutral">Ready</span></div><div id="resultSummary" class="result-summary"></div><div id="testResults" class="test-results"></div></section>
+
+      <section class="lower-grid">
+        <div class="panel" id="findings"><div class="panel-title"><div><p class="eyebrow">PRIORITIZED REVIEW</p><h2>Findings & remediation</h2></div></div><div id="findingList" class="finding-list"></div></div>
+        <div class="panel" id="trace"><div class="panel-title"><div><p class="eyebrow">OBSERVABILITY</p><h2>Execution trace</h2></div></div><div id="traceList" class="trace-list"></div></div>
+      </section>
+
+      <dialog id="providerSetupDialog" class="provider-setup-dialog">
+        <button class="dialog-close" id="closeProviderSetup" aria-label="Close provider setup" type="button">×</button>
+        <p class="eyebrow">DEMO STANDARD</p><h2>Connect your AI provider</h2>
+        <p class="setup-copy">The key is sent over HTTPS, kept only in this server process, never returned to the browser, and erased whenever the service restarts.</p>
+        <div id="providerSetupStatus" class="setup-status" aria-live="polite"></div>
+        <form id="providerSetupForm" class="provider-setup-form">
+          <label>API key<input type="password" name="apiKey" autocomplete="off" placeholder="sk-…" required></label>
+          <label>Base URL<input name="baseUrl" value="https://api.openai.com/v1" required></label>
+          <label>Model<input name="model" value="gpt-4o-mini" required></label>
+          <label>Provider label<input name="label" value="My OpenAI-Compatible API"></label>
+          <label>Setup token<input type="password" name="setupToken" autocomplete="off" placeholder="Value of ADMIN_SETUP_TOKEN" required></label>
+          <button class="primary" type="submit">Save secure session key</button>
+          <button class="ghost danger-button" id="clearProviderSetup" type="button">Remove session key</button>
+        </form>
+        <p class="setup-note"><strong>Production standard:</strong> store permanent keys in Render Environment. This panel is for controlled demos and temporary testing.</p>
+      </dialog>
+    </main>
+  </div>
+  <script type="module" src="/app.js"></script>
+  <script type="module" src="/provider-setup.js"></script>
+</body>
+</html>
