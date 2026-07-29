@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Workflow Reliability Lab</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">BUILDER'S DESK LABS</p>
+        <h1>AI Workflow Reliability Lab</h1>
+        <p class="subtitle">Fault-tolerant n8n orchestration with structured AI output, retry recovery, idempotency, audit logs, and MCP tools.</p>
+      </div>
+      <div class="health"><span id="health-dot"></span><strong id="health-text">Checking service</strong></div>
+    </header>
+
+    <section class="metrics" aria-label="Workflow capabilities">
+      <article><strong>3×</strong><span>bounded retries</span></article>
+      <article><strong>100%</strong><span>schema validated</span></article>
+      <article><strong>24/7</strong><span>execution audit trail</span></article>
+      <article><strong>MCP</strong><span>tool interface</span></article>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">LIVE TEST</p><h2>Run a workflow scenario</h2></div>
+          <button id="new-id" class="secondary" type="button">New request ID</button>
+        </div>
+        <label>Request ID<input id="request-id" autocomplete="off"></label>
+        <label>Session ID<input id="session-id" value="portfolio-demo"></label>
+        <label>Failure scenario
+          <select id="scenario">
+            <option value="success">Success</option>
+            <option value="timeout-once">Timeout once, then recover</option>
+            <option value="rate-limit-once">Rate limit once, then recover</option>
+            <option value="invalid-ai-once">Invalid AI JSON once, then repair</option>
+            <option value="duplicate">Duplicate protection</option>
+            <option value="permanent-failure">Permanent upstream failure</option>
+          </select>
+        </label>
+        <label>Incident report
+          <textarea id="message" rows="6">Our production email automation stopped after a webhook payload change. The API sometimes times out and duplicate retries are sending the same campaign twice.</textarea>
+        </label>
+        <button id="run" class="primary" type="button">Run fault-tolerant workflow</button>
+        <p id="form-status" class="status" aria-live="polite"></p>
+      </section>
+
+      <section class="panel result-panel">
+        <div class="panel-heading"><div><p class="eyebrow">STRUCTURED RESULT</p><h2>Diagnosis</h2></div><span id="result-badge" class="badge">Idle</span></div>
+        <div id="empty-result" class="empty">Run a scenario to inspect normalized output, retries, confidence, and recovery behavior.</div>
+        <div id="result" hidden>
+          <div class="result-top"><div><span>Category</span><strong id="category"></strong></div><div><span>Severity</span><strong id="severity"></strong></div><div><span>Confidence</span><strong id="confidence"></strong></div></div>
+          <h3 id="summary"></h3>
+          <p id="cause"></p>
+          <h4>Recommended actions</h4>
+          <ol id="actions"></ol>
+          <div class="telemetry"><span id="diag-attempts"></span><span id="ai-attempts"></span><span id="duration"></span><span id="mode"></span></div>
+          <details><summary>Raw JSON</summary><pre id="raw"></pre></details>
+        </div>
+      </section>
+    </div>
+
+    <section class="panel timeline-panel">
+      <div class="panel-heading"><div><p class="eyebrow">AUDIT TRAIL</p><h2>Recent executions</h2></div><button id="refresh" class="secondary" type="button">Refresh</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Updated</th><th>Request</th><th>Scenario</th><th>Status</th><th>Attempts</th></tr></thead><tbody id="execution-body"><tr><td colspan="5">No executions yet.</td></tr></tbody></table></div>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

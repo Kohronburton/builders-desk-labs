@@ -1,0 +1,82 @@
+{
+  "name": "AI Workflow Reliability - Support Triage",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "ai-workflow-reliability", "responseMode": "responseNode", "options": {} },
+      "id": "4c4039e0-e250-41ef-8daa-0e0ef7f1dfe7",
+      "name": "Inbound Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-640, 80],
+      "webhookId": "ai-workflow-reliability"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\nconst now = Date.now();\nreturn [{ json: {\n  requestId: body.requestId || `n8n-${now}-${Math.random().toString(36).slice(2,7)}`,\n  sessionId: body.sessionId || 'n8n-demo',\n  message: body.message || 'Production email automation stopped after a webhook payload change.',\n  scenario: body.scenario || 'success',\n  metadata: { source: 'n8n', receivedAt: new Date().toISOString(), originalHeaders: $json.headers ?? {} }\n}}];"
+      },
+      "id": "86e93b31-6e4f-4132-9dbd-e80fb0bf1a7b",
+      "name": "Normalize & Validate Envelope",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-400, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://workflow-engine:3000/v1/workflows/support-triage",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": { "timeout": 10000 }
+      },
+      "id": "de79071f-597a-4209-865c-2b17a7b39a7f",
+      "name": "Execute Reliability Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-140, 80],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": { "responseCode": 200 } },
+      "id": "a52d87aa-3846-48f7-af5c-1ed5b78a3599",
+      "name": "Return Structured Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [140, 20]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { error: true, code: 'WORKFLOW_EXECUTION_FAILED', message: $json.error?.message || $json.message || 'Workflow execution failed', requestId: $('Normalize & Validate Envelope').item.json.requestId } }];"
+      },
+      "id": "0ad97c91-d3e5-45a8-b2a3-40ce520009d3",
+      "name": "Normalize Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [120, 180]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": { "responseCode": 502 } },
+      "id": "826a6ef8-a28b-4894-b585-b21a133d7b45",
+      "name": "Return Controlled Failure",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [380, 180]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Inbound Webhook": { "main": [[{ "node": "Normalize & Validate Envelope", "type": "main", "index": 0 }]] },
+    "Normalize & Validate Envelope": { "main": [[{ "node": "Execute Reliability Engine", "type": "main", "index": 0 }]] },
+    "Execute Reliability Engine": { "main": [[{ "node": "Return Structured Result", "type": "main", "index": 0 }], [{ "node": "Normalize Error", "type": "main", "index": 0 }]] },
+    "Normalize Error": { "main": [[{ "node": "Return Controlled Failure", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "saveDataErrorExecution": "all", "saveDataSuccessExecution": "all" },
+  "versionId": "7de8d246-b3c5-4af4-a0c9-84911dcf0b17",
+  "meta": { "templateCredsSetupCompleted": true },
+  "tags": []
+}

@@ -1,0 +1,6 @@
+{
+  "requestId": "demo-timeout-001",
+  "sessionId": "portfolio-demo",
+  "scenario": "timeout-once",
+  "message": "The campaign dispatch API times out intermittently and n8n executions are failing."
+}

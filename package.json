@@ -1,0 +1,17 @@
+{
+  "name": "n8n-ai-workflow-reliability-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Fault-tolerant n8n AI workflow demo with retries, idempotency, structured outputs, observability, and MCP tools.",
+  "engines": {
+    "node": ">=22.6.0"
+  },
+  "scripts": {
+    "dev": "node --watch --experimental-strip-types src/server.ts",
+    "start": "node --experimental-strip-types src/server.ts",
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
+    "check": "node --experimental-strip-types scripts/check-workflows.ts",
+    "ci": "npm run check && npm test"
+  }
+}
