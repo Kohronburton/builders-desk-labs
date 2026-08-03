@@ -18,7 +18,7 @@
         <button>Data Registry</button>
         <button>System Health</button>
       </nav>
-      <div class="sync-card"><span class="dot"></span><div><strong>Google Workspace</strong><small>Demo sync healthy</small></div></div>
+      <div class="sync-card"><span class="dot"></span><div><strong>Google Workspace</strong><small>Sheets, JSON, and SOP sources healthy</small></div></div>
     </aside>
 
     <main class="workspace">
@@ -28,16 +28,16 @@
       </header>
 
       <section class="metrics">
-        <article><span>Confirmed guests</span><strong id="metricGuests">85</strong><small>From event input</small></article>
+        <article><span>Confirmed guests</span><strong id="metricGuests">85</strong><small>Loaded from event JSON</small></article>
         <article><span>Production count</span><strong id="metricProduction">92</strong><small id="metricBuffer">8% buffer included</small></article>
-        <article><span>Ingredient lines</span><strong id="metricLines">12</strong><small>Calculated in Python</small></article>
-        <article class="warning-metric"><span>Open warnings</span><strong id="metricWarnings">1</strong><small>Operational review queue</small></article>
+        <article><span>Ingredient lines</span><strong id="metricLines">12</strong><small>Loaded from Google Sheets data</small></article>
+        <article class="warning-metric"><span>Open warnings</span><strong id="metricWarnings">1</strong><small>Rules plus Markdown SOP review</small></article>
       </section>
 
       <section class="layout">
         <div class="main-column">
           <article class="panel">
-            <div class="panel-heading"><div><span class="eyebrow">DETERMINISTIC INPUTS</span><h2>Event setup</h2></div><span class="pill">Source locked</span></div>
+            <div class="panel-heading"><div><span class="eyebrow">NORMALIZED WORKSPACE INPUTS</span><h2>Event setup</h2></div><span class="pill">Sources validated</span></div>
             <div class="form-grid">
               <label>Guest count<input id="guests" type="number" min="1" value="85" /></label>
               <label>Production buffer<input id="buffer" type="number" min="0" max="30" value="8" /></label>
@@ -56,9 +56,10 @@
         </div>
 
         <aside class="right-column">
-          <article class="panel"><div class="panel-heading"><div><span class="eyebrow">SYSTEM HEALTH</span><h2>Run quality</h2></div><strong id="healthScore" class="score">96%</strong></div><div id="healthRows"></div></article>
+          <article class="panel"><div class="panel-heading"><div><span class="eyebrow">DATA REGISTRY</span><h2>Workspace sources</h2></div></div><div id="sourceRows"></div></article>
+          <article class="panel"><div class="panel-heading"><div><span class="eyebrow">SYSTEM HEALTH</span><h2>Run quality</h2></div><strong id="healthScore" class="score">98%</strong></div><div id="healthRows"></div></article>
           <article class="panel"><div class="panel-heading"><div><span class="eyebrow">REVIEW QUEUE</span><h2>Warnings</h2></div></div><div id="warnings"></div></article>
-          <article class="panel architecture"><span class="eyebrow">WHY THIS WORKS</span><h2>Claude is one bounded layer</h2><p>Google Sheets can remain the source of truth. Python performs repeatable scaling, validation, exports, and workflow rules. Claude only handles language-heavy instructions from fresh event data.</p><div class="flow"><span>Sheets</span><b>→</b><span>Python</span><b>→</b><span>Claude</span><b>→</b><span>Validated output</span></div></article>
+          <article class="panel architecture"><span class="eyebrow">WHY THIS WORKS</span><h2>One workspace, three source types</h2><p>Google Sheets supplies recipe and production data. JSON supplies event configuration. Markdown supplies approved SOP language. Python normalizes all three before any Claude request is made.</p><div class="flow"><span>Sheets</span><b>+</b><span>JSON</span><b>+</b><span>Markdown</span><b>→</b><span>Python</span><b>→</b><span>Claude</span></div></article>
         </aside>
       </section>
     </main>
