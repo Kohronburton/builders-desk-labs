@@ -2,94 +2,87 @@ from __future__ import annotations
 
 import csv
 import io
-import json
 import math
-from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 
+from workspace_sources import WorkspaceRepository
+
 BASE_DIR = Path(__file__).resolve().parent
 PUBLIC_DIR = BASE_DIR / "public"
+DATA_DIR = BASE_DIR / "data"
 
 app = Flask(__name__, static_folder=str(PUBLIC_DIR), static_url_path="")
-
-
-@dataclass(frozen=True)
-class Ingredient:
-    name: str
-    quantity: float
-    unit: str
-
-
-@dataclass(frozen=True)
-class Recipe:
-    id: str
-    name: str
-    yield_count: int
-    ingredients: tuple[Ingredient, ...]
-
-
-RECIPES: tuple[Recipe, ...] = (
-    Recipe(
-        id="chicken",
-        name="Herb Roasted Chicken",
-        yield_count=10,
-        ingredients=(
-            Ingredient("Chicken breasts", 10, "each"),
-            Ingredient("Olive oil", 0.5, "cup"),
-            Ingredient("Garlic", 8, "cloves"),
-            Ingredient("Fresh herbs", 0.25, "cup"),
-        ),
-    ),
-    Recipe(
-        id="pasta",
-        name="Creamy Tuscan Pasta",
-        yield_count=12,
-        ingredients=(
-            Ingredient("Penne pasta", 3, "lb"),
-            Ingredient("Heavy cream", 1.5, "qt"),
-            Ingredient("Parmesan", 1.25, "lb"),
-            Ingredient("Spinach", 1.5, "lb"),
-        ),
-    ),
-    Recipe(
-        id="salad",
-        name="Market Greens Salad",
-        yield_count=15,
-        ingredients=(
-            Ingredient("Mixed greens", 2.5, "lb"),
-            Ingredient("Cherry tomatoes", 2, "pt"),
-            Ingredient("Cucumber", 3, "each"),
-            Ingredient("Vinaigrette", 2, "cup"),
-        ),
-    ),
-)
+workspace = WorkspaceRepository(DATA_DIR)
 
 
 def round_quantity(value: float) -> float:
     return round(value + 1e-9, 2)
 
 
+def grouped_recipes() -> list[dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
+    for row in workspace.load_recipe_rows():
+        recipe = grouped.setdefault(
+            row["recipe_id"],
+            {
+                "id": row["recipe_id"],
+                "name": row["recipe_name"],
+                "yield_count": row["yield_count"],
+                "ingredients": [],
+            },
+        )
+        recipe["ingredients"].append(
+            {
+                "name": row["ingredient"],
+                "quantity": row["quantity"],
+                "unit": row["unit"],
+            }
+        )
+    return list(grouped.values())
+
+
+def markdown_sections(markdown: str) -> list[dict[str, str]]:
+    sections: list[dict[str, str]] = []
+    current_title = ""
+    current_lines: list[str] = []
+    for raw_line in markdown.splitlines():
+        line = raw_line.strip()
+        if line.startswith("## "):
+            if current_title:
+                sections.append({"title": current_title, "instruction": " ".join(current_lines).strip()})
+            current_title = line[3:].strip()
+            current_lines = []
+        elif line and not line.startswith("# "):
+            current_lines.append(line)
+    if current_title:
+        sections.append({"title": current_title, "instruction": " ".join(current_lines).strip()})
+    return sections
+
+
 def build_operations_package(payload: dict[str, Any]) -> dict[str, Any]:
-    guests = max(1, int(payload.get("guests", 85)))
-    buffer_percent = min(30, max(0, int(payload.get("buffer", 8))))
-    selected_ids = payload.get("selected") or [recipe.id for recipe in RECIPES]
+    event = workspace.load_event()
+    recipes = grouped_recipes()
+
+    guests = max(1, int(payload.get("guests", event["guest_count"])))
+    buffer_percent = min(30, max(0, int(payload.get("buffer", event["production_buffer_percent"]))))
+    selected_ids = payload.get("selected") or event["menu_ids"]
 
     production_count = math.ceil(guests * (1 + buffer_percent / 100))
-    selected_recipes = [recipe for recipe in RECIPES if recipe.id in selected_ids]
+    selected_recipes = [recipe for recipe in recipes if recipe["id"] in selected_ids]
 
     prep_rows: list[dict[str, Any]] = []
     for recipe in selected_recipes:
-        scale = production_count / recipe.yield_count
-        for ingredient in recipe.ingredients:
+        scale = production_count / recipe["yield_count"]
+        for ingredient in recipe["ingredients"]:
             prep_rows.append(
                 {
-                    "dish": recipe.name,
-                    "ingredient": ingredient.name,
-                    "quantity": round_quantity(ingredient.quantity * scale),
-                    "unit": ingredient.unit,
+                    "dish": recipe["name"],
+                    "ingredient": ingredient["name"],
+                    "quantity": round_quantity(ingredient["quantity"] * scale),
+                    "unit": ingredient["unit"],
                 }
             )
 
@@ -100,48 +93,27 @@ def build_operations_package(payload: dict[str, Any]) -> dict[str, Any]:
         warnings.insert(0, "Menu has fewer than two active production items.")
 
     assembly = [
-        {
-            "step": 1,
-            "title": "Stage by service zone",
-            "instruction": "Separate cold items, hot mains, and finishing ingredients before assembly begins.",
-        },
-        {
-            "step": 2,
-            "title": "Build in batches of 20",
-            "instruction": "Label each completed batch with item, count, allergen flag, and service destination.",
-        },
-        {
-            "step": 3,
-            "title": "Protect holding temperatures",
-            "instruction": "Keep hot foods above 140°F and chilled foods below 41°F until loading.",
-        },
-        {
-            "step": 4,
-            "title": "Run final QA",
-            "instruction": "Match packed quantities against the deterministic production count before loading.",
-        },
+        {"step": index + 1, "title": section["title"], "instruction": section["instruction"]}
+        for index, section in enumerate(markdown_sections(workspace.load_sop_markdown()))
     ]
+
+    source_registry = [status.__dict__ for status in workspace.source_registry()]
 
     return {
         "event": {
-            "name": "Harbor & Foundry Annual Dinner",
-            "service_time": "Saturday · 6:00 PM",
-            "venue": "Waterfront Gallery",
+            "id": event["event_id"],
+            "name": event["name"],
+            "service_time": event["service_time"],
+            "venue": event["venue"],
+            "service_style": event["service_style"],
         },
         "inputs": {
             "guests": guests,
             "buffer_percent": buffer_percent,
             "production_count": production_count,
-            "selected_menu_ids": [recipe.id for recipe in selected_recipes],
+            "selected_menu_ids": [recipe["id"] for recipe in selected_recipes],
         },
-        "recipes": [
-            {
-                "id": recipe.id,
-                "name": recipe.name,
-                "yield_count": recipe.yield_count,
-            }
-            for recipe in RECIPES
-        ],
+        "recipes": [{key: recipe[key] for key in ("id", "name", "yield_count")} for recipe in recipes],
         "prep_rows": prep_rows,
         "assembly": assembly,
         "timeline": [
@@ -151,9 +123,12 @@ def build_operations_package(payload: dict[str, Any]) -> dict[str, Any]:
             {"name": "Load vehicle", "owner": "Sam", "start": "2:20 PM", "status": "Pending"},
         ],
         "warnings": warnings,
+        "sources": source_registry,
         "health": {
-            "score": 96,
-            "source_data": "Valid",
+            "score": 98,
+            "google_sheets": "Synced",
+            "json_event": "Valid",
+            "markdown_sop": "Indexed",
             "calculation_engine": "Passed",
             "output_schema": "Passed",
             "long_chat_dependency": "Removed",
@@ -166,37 +141,28 @@ def index() -> Response:
     return send_from_directory(PUBLIC_DIR, "index.html")
 
 
+@app.get("/api/workspace-sources")
+def workspace_sources() -> Response:
+    return jsonify([status.__dict__ for status in workspace.source_registry()])
+
+
 @app.get("/api/recipes")
 def recipes() -> Response:
-    return jsonify(
-        [
-            {
-                "id": recipe.id,
-                "name": recipe.name,
-                "yield_count": recipe.yield_count,
-                "ingredients": [asdict(item) for item in recipe.ingredients],
-            }
-            for recipe in RECIPES
-        ]
-    )
+    return jsonify(grouped_recipes())
 
 
 @app.post("/api/operations-package")
 def operations_package() -> Response:
-    payload = request.get_json(silent=True) or {}
-    return jsonify(build_operations_package(payload))
+    return jsonify(build_operations_package(request.get_json(silent=True) or {}))
 
 
 @app.post("/api/export/prep.csv")
 def export_prep_csv() -> Response:
-    payload = request.get_json(silent=True) or {}
-    package = build_operations_package(payload)
-
+    package = build_operations_package(request.get_json(silent=True) or {})
     output = io.StringIO()
     writer = csv.DictWriter(output, fieldnames=["dish", "ingredient", "quantity", "unit"])
     writer.writeheader()
     writer.writerows(package["prep_rows"])
-
     return Response(
         output.getvalue(),
         mimetype="text/csv",
@@ -206,7 +172,7 @@ def export_prep_csv() -> Response:
 
 @app.get("/api/health")
 def health() -> Response:
-    return jsonify({"status": "ok", "service": "catering-logistics-claude-demo"})
+    return jsonify({"status": "ok", "service": "catering-logistics-claude-demo", "sources": 3})
 
 
 if __name__ == "__main__":
