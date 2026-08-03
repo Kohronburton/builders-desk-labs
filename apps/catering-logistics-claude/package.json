@@ -1,0 +1,14 @@
+{
+  "name": "catering-logistics-claude-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deterministic catering operations demo with bounded Claude-style generation",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
