@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Builder's Desk Labs | Catering Operations</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-mark">BD</div><div><strong>Builder's Desk Labs</strong><span>Catering operations demo</span></div></div>
+      <nav>
+        <button>Command Center</button>
+        <button class="active">Event Workspace</button>
+        <button>Production</button>
+        <button>Recipes</button>
+        <button>Data Registry</button>
+        <button>System Health</button>
+      </nav>
+      <div class="sync-card"><span class="dot"></span><div><strong>Google Workspace</strong><small>Demo sync healthy</small></div></div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div><span class="eyebrow">LIVE EVENT WORKSPACE</span><h1>Harbor & Foundry Annual Dinner</h1><p>Saturday · 6:00 PM · Waterfront Gallery</p></div>
+        <div class="actions"><button id="exportBtn" class="secondary">Export prep CSV</button><button id="generateBtn" class="primary">Generate package</button></div>
+      </header>
+
+      <section class="metrics">
+        <article><span>Confirmed guests</span><strong id="metricGuests">85</strong><small>From event input</small></article>
+        <article><span>Production count</span><strong id="metricProduction">92</strong><small id="metricBuffer">8% buffer included</small></article>
+        <article><span>Ingredient lines</span><strong id="metricLines">12</strong><small>Calculated in Python</small></article>
+        <article class="warning-metric"><span>Open warnings</span><strong id="metricWarnings">1</strong><small>Operational review queue</small></article>
+      </section>
+
+      <section class="layout">
+        <div class="main-column">
+          <article class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">DETERMINISTIC INPUTS</span><h2>Event setup</h2></div><span class="pill">Source locked</span></div>
+            <div class="form-grid">
+              <label>Guest count<input id="guests" type="number" min="1" value="85" /></label>
+              <label>Production buffer<input id="buffer" type="number" min="0" max="30" value="8" /></label>
+              <label>Service style<select><option>Plated</option><option>Buffet</option><option>Stations</option></select></label>
+            </div>
+            <div id="menuChips" class="chips"></div>
+          </article>
+
+          <article class="panel output-panel">
+            <div class="panel-heading"><div><span class="eyebrow">CONTROLLED OUTPUT</span><h2>Operations package</h2><p id="generatedAt">Fresh Python calculation</p></div><span class="pill">Schema valid</span></div>
+            <div class="tabs"><button data-tab="prep" class="active">Prep list</button><button data-tab="assembly">Assembly</button><button data-tab="timeline">Timeline</button></div>
+            <div id="prepTab" class="tab-panel active"><div class="table-wrap"><table><thead><tr><th>Dish</th><th>Ingredient</th><th>Quantity</th><th>Unit</th></tr></thead><tbody id="prepRows"></tbody></table></div></div>
+            <div id="assemblyTab" class="tab-panel"><div id="assemblyRows" class="instruction-list"></div></div>
+            <div id="timelineTab" class="tab-panel"><div id="timelineRows" class="timeline-list"></div></div>
+          </article>
+        </div>
+
+        <aside class="right-column">
+          <article class="panel"><div class="panel-heading"><div><span class="eyebrow">SYSTEM HEALTH</span><h2>Run quality</h2></div><strong id="healthScore" class="score">96%</strong></div><div id="healthRows"></div></article>
+          <article class="panel"><div class="panel-heading"><div><span class="eyebrow">REVIEW QUEUE</span><h2>Warnings</h2></div></div><div id="warnings"></div></article>
+          <article class="panel architecture"><span class="eyebrow">WHY THIS WORKS</span><h2>Claude is one bounded layer</h2><p>Google Sheets can remain the source of truth. Python performs repeatable scaling, validation, exports, and workflow rules. Claude only handles language-heavy instructions from fresh event data.</p><div class="flow"><span>Sheets</span><b>→</b><span>Python</span><b>→</b><span>Claude</span><b>→</b><span>Validated output</span></div></article>
+        </aside>
+      </section>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
