@@ -42,13 +42,14 @@ function render(data) {
   $('metricLines').textContent = data.prep_rows.length;
   $('metricWarnings').textContent = data.warnings.length;
   $('healthScore').textContent = `${data.health.score}%`;
-  $('generatedAt').textContent = `Generated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} from fresh event data`;
+  $('generatedAt').textContent = `Generated ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} from normalized workspace data`;
 
   $('prepRows').innerHTML = data.prep_rows.map(row => `<tr><td>${row.dish}</td><td>${row.ingredient}</td><td>${row.quantity}</td><td>${row.unit}</td></tr>`).join('');
   $('assemblyRows').innerHTML = data.assembly.map(item => `<div><span>${String(item.step).padStart(2, '0')}</span><p><strong>${item.title}.</strong> ${item.instruction}</p></div>`).join('');
   $('timelineRows').innerHTML = data.timeline.map(item => `<div><span class="timeline-dot ${item.status.toLowerCase()}"></span><div><strong>${item.name}</strong><p>${item.owner} · ${item.start}</p></div><em>${item.status}</em></div>`).join('');
   $('warnings').innerHTML = data.warnings.map((warning, index) => `<div class="warning"><span>${index + 1}</span><p>${warning}</p></div>`).join('');
   $('healthRows').innerHTML = Object.entries(data.health).filter(([key]) => key !== 'score').map(([key, value]) => `<div class="health-row"><span>${key.replaceAll('_', ' ')}</span><b>${value}</b></div>`).join('');
+  $('sourceRows').innerHTML = data.sources.map(source => `<div class="source-row"><div><strong>${source.kind}</strong><span>${source.source}</span><small>${source.purpose}</small></div><div><b>${source.status}</b><small>${source.records} records</small></div></div>`).join('');
 }
 
 async function exportPrep() {
@@ -80,5 +81,5 @@ $('exportBtn').addEventListener('click', exportPrep);
 
 loadRecipes().then(generatePackage).catch(error => {
   console.error(error);
-  $('generatedAt').textContent = 'Unable to load demo data';
+  $('generatedAt').textContent = 'Unable to load workspace data';
 });
