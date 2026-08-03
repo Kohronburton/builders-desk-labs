@@ -1,0 +1,13 @@
+recipe_id,recipe_name,yield_count,ingredient,quantity,unit
+chicken,Herb Roasted Chicken,10,Chicken breasts,10,each
+chicken,Herb Roasted Chicken,10,Olive oil,0.5,cup
+chicken,Herb Roasted Chicken,10,Garlic,8,cloves
+chicken,Herb Roasted Chicken,10,Fresh herbs,0.25,cup
+pasta,Creamy Tuscan Pasta,12,Penne pasta,3,lb
+pasta,Creamy Tuscan Pasta,12,Heavy cream,1.5,qt
+pasta,Creamy Tuscan Pasta,12,Parmesan,1.25,lb
+pasta,Creamy Tuscan Pasta,12,Spinach,1.5,lb
+salad,Market Greens Salad,15,Mixed greens,2.5,lb
+salad,Market Greens Salad,15,Cherry tomatoes,2,pt
+salad,Market Greens Salad,15,Cucumber,3,each
+salad,Market Greens Salad,15,Vinaigrette,2,cup

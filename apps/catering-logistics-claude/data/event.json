@@ -1,0 +1,10 @@
+{
+  "event_id": "HF-2026-0815",
+  "name": "Harbor & Foundry Annual Dinner",
+  "service_time": "2026-08-15T18:00:00-04:00",
+  "venue": "Waterfront Gallery",
+  "service_style": "Plated",
+  "guest_count": 85,
+  "production_buffer_percent": 8,
+  "menu_ids": ["chicken", "pasta", "salad"]
+}
