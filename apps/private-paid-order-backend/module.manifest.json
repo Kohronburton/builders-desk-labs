@@ -1,0 +1,37 @@
+{
+  "id": "private-paid-order-backend",
+  "name": "Private Paid-Order Backend",
+  "version": "2.0.0",
+  "status": "production-candidate",
+  "description": "Secure paid-order intake, private asset handling, job creation, and operator-safe production views.",
+  "capabilities": [
+    "signed-webhook-intake",
+    "replay-protection",
+    "idempotent-order-processing",
+    "script-segmentation",
+    "private-asset-ingestion",
+    "operator-job-views"
+  ],
+  "requires": [
+    "config",
+    "logging",
+    "events",
+    "health",
+    "testing"
+  ],
+  "owns": [
+    "Customer",
+    "Order",
+    "ProductionJob",
+    "Script",
+    "ScriptSegment",
+    "UploadedAsset",
+    "WebhookAttempt"
+  ],
+  "placeholders": [
+    "PLACEHOLDER_PACKAGE_CATALOGUE",
+    "PLACEHOLDER_SEGMENTATION_RULES",
+    "PLACEHOLDER_WORDPRESS_UPLOAD_HOSTS",
+    "PLACEHOLDER_RETENTION_POLICY"
+  ]
+}
