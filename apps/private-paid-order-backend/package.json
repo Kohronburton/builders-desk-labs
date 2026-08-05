@@ -1,0 +1,21 @@
+{
+  "name": "@builders-desk/private-paid-order-backend",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test test/**/*.test.ts",
+    "check": "pnpm typecheck && pnpm test"
+  },
+  "dependencies": {
+    "@mayne/foundation-core": "workspace:*",
+    "@mayne/module-sdk": "workspace:*",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
