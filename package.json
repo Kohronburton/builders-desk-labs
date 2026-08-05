@@ -1,0 +1,13 @@
+{
+  "name": "builders-desk-labs",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "validate:modules": "node scripts/validate-modules.mjs",
+    "quality": "pnpm validate:modules && pnpm typecheck && pnpm test"
+  }
+}
