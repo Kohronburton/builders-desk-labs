@@ -8,6 +8,7 @@
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "validate:modules": "node scripts/validate-modules.mjs",
-    "quality": "pnpm validate:modules && pnpm typecheck && pnpm test"
+    "check": "pnpm validate:modules && pnpm typecheck && pnpm test",
+    "quality": "pnpm check"
   }
 }
