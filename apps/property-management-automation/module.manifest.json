@@ -1,0 +1,10 @@
+{
+  "id": "property-management-automation",
+  "name": "Property Management Automation",
+  "version": "1.0.0",
+  "maturity": "demo",
+  "description": "Original property-management workflow, registered with Mayne without replacing its business logic or interface.",
+  "capabilities": ["workflow-automation", "provider-integration", "operator-dashboard"],
+  "foundation": ["configuration", "logging", "health", "testing"],
+  "owns": ["Property", "MaintenanceRequest", "Vendor", "Resident"]
+}
