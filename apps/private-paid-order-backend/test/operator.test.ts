@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import Fastify from "fastify";
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import type { AuthRepository, OperatorSession, OperatorUser } from "../src/auth/repository.js";
 import { hashPassword } from "../src/auth/password.js";
 import { AuthService } from "../src/auth/service.js";
@@ -11,10 +11,12 @@ import type {
   JobStatus,
   OperatorAsset,
   OperatorJobDetail,
+  OperatorJobHistory,
   OperatorJobSummary,
   OperatorRepository,
   OperatorSegment
 } from "../src/operator/repository.js";
+import { registerHistoryRoutes } from "../src/operator/history-routes.js";
 import { registerOperatorRoutes } from "../src/operator/routes.js";
 
 const JOB_ID = "11111111-1111-4111-8111-111111111111";
@@ -63,6 +65,7 @@ class OperatorRepo implements OperatorRepository {
   }
   async getSegments(): Promise<OperatorSegment[]> { return [{ id: "seg-1", sequence: 1, speakerCode: "HOST", text: "Hello", wordCount: 1, characterCount: 5, status: "READY" }]; }
   async getAssets(): Promise<OperatorAsset[]> { return [{ id: ASSET_ID, assetType: "FACE_IMAGE", originalFileName: "face.png", contentType: "image/png", sizeBytes: 100, ingestionStatus: "READY", retentionDays: 30, deleteAfter: new Date("2026-09-01T00:00:00Z") }]; }
+  async getHistory(): Promise<OperatorJobHistory[]> { return [{ id: "history-1", previousStatus: "RECEIVED", newStatus: "READY_FOR_PRODUCTION", reason: "Ready", changedByType: "system", changedById: "asset-worker", createdAt: new Date("2026-08-01T00:05:00Z") }]; }
   async getAssetForAccess(): Promise<AssetAccessRecord> { return { id: ASSET_ID, jobId: JOB_ID, storageKey: "customer-assets/job/face.png", ingestionStatus: "READY" }; }
   async updateStatus(input: Parameters<OperatorRepository["updateStatus"]>[0]) {
     if (this.status !== input.expectedCurrentStatus) return false;
@@ -89,6 +92,7 @@ async function setup() {
   const operatorRepo = new OperatorRepo();
   const app = Fastify();
   await registerOperatorRoutes(app, { auth, repository: operatorRepo, storage: new Storage(), signedUrlTtlSeconds: 600, secureCookies: false });
+  await registerHistoryRoutes(app, { auth, repository: operatorRepo, sessionCookieName: "mayne_session" });
   await app.ready();
   const login = await auth.login("operator@example.test", "Correct Horse Battery Staple 42");
   const cookies = `mayne_session=${login!.sessionToken}; mayne_csrf=${login!.csrfToken}`;
@@ -112,6 +116,17 @@ test("operator job detail contains permitted data and no proprietary fields", as
   for (const forbidden of ["internal.proprietary_content", "directorModule", "internalPrompt", "apiKey", "storageKey"]) {
     assert.equal(text.includes(forbidden), false, `response leaked forbidden marker ${forbidden}`);
   }
+});
+
+test("operator can view safe job status history", async (t) => {
+  const { app, cookies } = await setup();
+  t.after(() => app.close());
+  const response = await app.inject({ method: "GET", url: `/api/v1/jobs/${JOB_ID}/history`, headers: { cookie: cookies } });
+  assert.equal(response.statusCode, 200);
+  const payload = response.json();
+  assert.equal(payload.history.length, 1);
+  assert.equal(payload.history[0].newStatus, "READY_FOR_PRODUCTION");
+  assert.equal(response.body.includes("proprietary"), false);
 });
 
 test("state change requires CSRF double-submit token", async (t) => {
