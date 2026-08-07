@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import Fastify from "fastify";
 import helmet from "@fastify/helmet";
 import { JsonConsoleLogger, runHealthChecks, type MayneLogger } from "@mayne/foundation-core";
+import type { CatalogueService } from "./catalogue/service.js";
 import { paidOrderSchema, fieldErrors } from "./contracts/paid-order.js";
 import type { Segmenter } from "./domain/segmentation.js";
 import type { IntakeRepository, WebhookAttemptFinish } from "./intake/repository.js";
@@ -11,6 +12,7 @@ export interface AppOptions {
   repository: IntakeRepository;
   nonceStore: NonceStore;
   keyResolver: KeyResolver;
+  catalogue: Pick<CatalogueService, "validate">;
   segmenter: Segmenter;
   encryptSourceUrl: (url: string) => string;
   retentionDays: 30 | 60 | 90;
@@ -141,6 +143,20 @@ export async function buildApp(options: AppOptions) {
     }
 
     const order = parsed.data;
+    const catalogueErrors = await options.catalogue.validate(order);
+    if (catalogueErrors.length > 0) {
+      await finish({
+        externalOrderId: order.order.externalOrderId,
+        signatureStatus: "verified", timestampStatus: "valid", replayStatus: "clear", validationStatus: "rejected",
+        finalStatus: "rejected", httpResponseCode: 422, failureCode: "CATALOGUE_VALIDATION_FAILED", failureDetails: catalogueErrors
+      });
+      return reply.code(422).send({
+        success: false,
+        requestId,
+        error: { code: "PAYLOAD_VALIDATION_FAILED", message: "One or more catalogue selections are invalid.", fields: catalogueErrors }
+      });
+    }
+
     const segmentation = options.segmenter.segment(order);
     const parityErrors = [] as Array<{ path: string; code: string; message: string }>;
     if (segmentation.wordCount !== order.script.declaredWordCount) {
