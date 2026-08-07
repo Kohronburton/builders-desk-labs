@@ -1,8 +1,8 @@
 {
   "id": "private-paid-order-backend",
   "name": "Private Paid-Order Backend",
-  "version": "2.0.0",
-  "status": "production-candidate",
+  "version": "2.1.0",
+  "maturity": "production-candidate",
   "description": "Secure paid-order intake, private asset handling, job creation, and operator-safe production views.",
   "capabilities": [
     "signed-webhook-intake",
@@ -12,8 +12,8 @@
     "private-asset-ingestion",
     "operator-job-views"
   ],
-  "requires": [
-    "config",
+  "foundation": [
+    "configuration",
     "logging",
     "events",
     "health",
