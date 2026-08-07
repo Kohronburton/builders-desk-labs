@@ -1,4 +1,5 @@
 import { isIP } from "node:net";
+import { extname } from "node:path";
 import { fileTypeFromBuffer } from "file-type";
 
 export interface DownloadPolicy {
@@ -11,6 +12,7 @@ export interface DownloadPolicy {
 export interface DownloadedAsset {
   bytes: Buffer;
   detectedContentType: string;
+  detectedExtension: string;
 }
 
 function assertSafeSourceUrl(rawUrl: string, allowedHosts: readonly string[]): URL {
@@ -47,7 +49,7 @@ async function readBoundedBody(response: Response, maxBytes: number): Promise<Bu
   return Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)), total);
 }
 
-export async function downloadAsset(rawUrl: string, policy: DownloadPolicy): Promise<DownloadedAsset> {
+export async function downloadAsset(rawUrl: string, originalFileName: string, policy: DownloadPolicy): Promise<DownloadedAsset> {
   const url = assertSafeSourceUrl(rawUrl, policy.allowedHosts);
   const response = await fetch(url, {
     method: "GET",
@@ -59,7 +61,15 @@ export async function downloadAsset(rawUrl: string, policy: DownloadPolicy): Pro
 
   const bytes = await readBoundedBody(response, policy.maxBytes);
   const detected = await fileTypeFromBuffer(bytes);
-  const detectedContentType = detected?.mime ?? "application/octet-stream";
+  if (!detected) throw new Error("ASSET_TYPE_UNDETECTABLE");
+  const detectedContentType = detected.mime.toLowerCase();
+  const detectedExtension = detected.ext.toLowerCase();
   if (!policy.allowedMimeTypes.includes(detectedContentType)) throw new Error("ASSET_MIME_NOT_ALLOWED");
-  return { bytes, detectedContentType };
+
+  const suppliedExtension = extname(originalFileName).slice(1).toLowerCase();
+  const equivalent = suppliedExtension === "jpeg" && detectedExtension === "jpg";
+  if (suppliedExtension && suppliedExtension !== detectedExtension && !equivalent) {
+    throw new Error("ASSET_EXTENSION_MISMATCH");
+  }
+  return { bytes, detectedContentType, detectedExtension };
 }
