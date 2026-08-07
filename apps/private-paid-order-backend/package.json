@@ -1,6 +1,6 @@
 {
   "name": "@builders-desk/private-paid-order-backend",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,8 +9,12 @@
     "worker": "node dist/worker.js",
     "dev:worker": "tsx src/worker.ts",
     "migrate": "tsx scripts/migrate.ts",
+    "db:smoke": "tsx scripts/db-smoke.ts",
+    "db:backup": "tsx scripts/backup-db.ts",
+    "db:restore-test": "tsx scripts/restore-test.ts",
     "user:create": "tsx scripts/create-user.ts",
     "webhook:simulate": "tsx scripts/simulate-webhook.ts",
+    "load:test": "tsx scripts/load-test.ts",
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "tsx --test test/**/*.test.ts",
