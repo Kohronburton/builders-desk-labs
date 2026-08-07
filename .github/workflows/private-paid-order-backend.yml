@@ -1,0 +1,34 @@
+name: Private Paid Order Backend
+
+on:
+  pull_request:
+    paths:
+      - "apps/private-paid-order-backend/**"
+      - "packages/foundation-core/**"
+      - "packages/module-sdk/**"
+      - "pnpm-workspace.yaml"
+      - "package.json"
+      - "tsconfig.base.json"
+  push:
+    branches:
+      - "agent/private-paid-order-backend-mayne-v2"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile=false
+      - run: pnpm --filter @builders-desk/private-paid-order-backend check
+      - run: pnpm --filter @builders-desk/private-paid-order-backend build
+      - run: pnpm validate:modules
