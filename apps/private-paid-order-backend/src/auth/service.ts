@@ -132,6 +132,14 @@ export class AuthService {
     return Boolean(csrfToken && safeHashEqual(operator.csrfTokenHash, csrfToken));
   }
 
+  async auditAction(operator: AuthenticatedOperator, input: { eventType: string; resourceType: string; resourceId: string; requestId?: string | undefined; safeMetadata?: Record<string, unknown> | undefined }): Promise<void> {
+    await this.repository.recordAudit({
+      ...input,
+      actorType: "operator",
+      actorId: operator.userId
+    });
+  }
+
   async logout(sessionToken: string | undefined, operator: AuthenticatedOperator | null, requestId?: string): Promise<void> {
     if (!sessionToken) return;
     await this.repository.revokeSession(hash(sessionToken));
