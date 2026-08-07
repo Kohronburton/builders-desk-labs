@@ -9,6 +9,7 @@ on:
       - "pnpm-workspace.yaml"
       - "package.json"
       - "tsconfig.base.json"
+      - ".github/workflows/private-paid-order-backend.yml"
   push:
     branches:
       - "agent/private-paid-order-backend-mayne-v2"
@@ -32,3 +33,56 @@ jobs:
       - run: pnpm --filter @builders-desk/private-paid-order-backend check
       - run: pnpm --filter @builders-desk/private-paid-order-backend build
       - run: pnpm validate:modules
+      - run: pnpm audit --audit-level high
+
+  database-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: paid_orders
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d paid_orders"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/paid_orders
+      BACKUP_FILE: ${{ runner.temp }}/paid-orders-ci.dump
+      RESTORE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/paid_orders_restore
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile=false
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply migrations twice
+        run: |
+          pnpm --filter @builders-desk/private-paid-order-backend migrate
+          pnpm --filter @builders-desk/private-paid-order-backend migrate
+      - name: Verify schema and proprietary denial
+        run: pnpm --filter @builders-desk/private-paid-order-backend db:smoke
+      - name: Create and verify backup
+        run: pnpm --filter @builders-desk/private-paid-order-backend db:backup
+      - name: Restore into disposable database
+        run: |
+          psql postgresql://postgres:postgres@127.0.0.1:5432/postgres -v ON_ERROR_STOP=1 -c "CREATE DATABASE paid_orders_restore"
+          pnpm --filter @builders-desk/private-paid-order-backend db:restore-test
+
+  container-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build -f apps/private-paid-order-backend/Dockerfile -t mayne-paid-order-backend:ci .
