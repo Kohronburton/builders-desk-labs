@@ -13,6 +13,7 @@ import { AuthService } from "./auth/service.js";
 import { CatalogueService } from "./catalogue/service.js";
 import { loadConfig } from "./config.js";
 import { DraftSpeakerTurnSegmenter } from "./domain/segmentation.js";
+import { registerHistoryRoutes } from "./operator/history-routes.js";
 import { registerOperatorRoutes } from "./operator/routes.js";
 import { FieldEncryptor } from "./security/encryption.js";
 
@@ -45,6 +46,7 @@ const catalogue = new CatalogueService(
   new PostgresCatalogueRepository(pool),
   config.NODE_ENV !== "production"
 );
+const operatorRepository = new PostgresOperatorRepository(pool);
 
 if (segmenter.version !== config.SEGMENTATION_POLICY_VERSION) {
   throw new Error(`Configured segmentation policy ${config.SEGMENTATION_POLICY_VERSION} is not implemented by this build`);
@@ -89,10 +91,16 @@ const app = await buildApp({
 
 await registerOperatorRoutes(app, {
   auth,
-  repository: new PostgresOperatorRepository(pool),
+  repository: operatorRepository,
   storage,
   signedUrlTtlSeconds: config.SIGNED_URL_TTL_SECONDS,
   secureCookies: config.NODE_ENV === "production"
+});
+
+await registerHistoryRoutes(app, {
+  auth,
+  repository: operatorRepository,
+  sessionCookieName: config.NODE_ENV === "production" ? "__Host-mayne_session" : "mayne_session"
 });
 
 let shuttingDown = false;
