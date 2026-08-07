@@ -4,24 +4,24 @@ import type { SegmentationResult } from "../domain/segmentation.js";
 export interface WebhookAttemptStart {
   requestId: string;
   receivedAt: Date;
-  sourceIp?: string;
-  keyId?: string;
-  nonceHash?: string;
-  idempotencyKey?: string;
+  sourceIp?: string | undefined;
+  keyId?: string | undefined;
+  nonceHash?: string | undefined;
+  idempotencyKey?: string | undefined;
   payloadHash: string;
   safeHeaders: Readonly<Record<string, string>>;
 }
 
 export interface WebhookAttemptFinish {
   requestId: string;
-  externalOrderId?: string;
+  externalOrderId?: string | undefined;
   signatureStatus: string;
   timestampStatus: string;
   replayStatus: string;
   validationStatus: string;
   finalStatus: string;
   httpResponseCode: number;
-  failureCode?: string;
+  failureCode?: string | undefined;
   failureDetails?: unknown;
   processingDurationMs: number;
 }
