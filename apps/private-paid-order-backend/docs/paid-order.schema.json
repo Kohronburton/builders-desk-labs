@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/paid-order-v1.json",
+  "title": "Paid Order v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion","eventType","eventId","occurredAt","source","customer","order","production","script","uploads","consents"],
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "eventType": { "const": "order.paid" },
+    "eventId": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "source": {
+      "type": "object", "additionalProperties": false, "required": ["system","siteCode"],
+      "properties": { "system": { "const": "wordpress" }, "siteCode": { "type": "string", "minLength": 1, "maxLength": 100 } }
+    },
+    "customer": {
+      "type": "object", "additionalProperties": false, "required": ["firstName","lastName","email"],
+      "properties": {
+        "externalCustomerId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "firstName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "lastName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "email": { "type": "string", "format": "email", "maxLength": 320 },
+        "phone": { "type": "string", "maxLength": 40 }
+      }
+    },
+    "order": {
+      "type": "object", "additionalProperties": false,
+      "required": ["externalOrderId","paymentReference","currency","subtotal","tax","total","paymentStatus","paidAt"],
+      "properties": {
+        "externalOrderId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "paymentReference": { "type": "string", "minLength": 1, "maxLength": 250 },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 3 },
+        "subtotal": { "type": "integer", "minimum": 0 },
+        "tax": { "type": "integer", "minimum": 0 },
+        "total": { "type": "integer", "minimum": 0 },
+        "paymentStatus": { "const": "paid" },
+        "paidAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "production": {
+      "type": "object", "additionalProperties": false,
+      "required": ["packageCode","peopleCount","productBranch","templateCode","performanceStyleCode","voiceOptionCode"],
+      "properties": {
+        "packageCode": { "$ref": "#/$defs/code" },
+        "peopleCount": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "productBranch": { "$ref": "#/$defs/code" },
+        "templateCode": { "$ref": "#/$defs/code" },
+        "performanceStyleCode": { "$ref": "#/$defs/code" },
+        "voiceOptionCode": { "$ref": "#/$defs/code" },
+        "customerNotes": { "type": "string", "maxLength": 5000 }
+      }
+    },
+    "script": {
+      "type": "object", "additionalProperties": false,
+      "required": ["text","speakerMode","declaredWordCount","declaredSegmentCount","speakers"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1, "maxLength": 200000 },
+        "speakerMode": { "enum": ["SINGLE_SPEAKER","MULTI_SPEAKER"] },
+        "declaredWordCount": { "type": "integer", "minimum": 0 },
+        "declaredSegmentCount": { "type": "integer", "minimum": 1 },
+        "speakers": {
+          "type": "array", "minItems": 1, "maxItems": 20,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["speakerCode","displayName"],
+            "properties": {
+              "speakerCode": { "$ref": "#/$defs/code" },
+              "displayName": { "type": "string", "minLength": 1, "maxLength": 100 }
+            }
+          }
+        }
+      }
+    },
+    "uploads": {
+      "type": "array", "maxItems": 50,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["externalAssetId","assetType","fileName","contentType","sizeBytes","temporaryUrl"],
+        "properties": {
+          "externalAssetId": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "assetType": { "$ref": "#/$defs/code" },
+          "fileName": { "type": "string", "minLength": 1, "maxLength": 255 },
+          "contentType": { "type": "string", "minLength": 1, "maxLength": 150 },
+          "sizeBytes": { "type": "integer", "minimum": 1 },
+          "temporaryUrl": { "type": "string", "format": "uri", "pattern": "^https://" },
+          "checksumSha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }
+        }
+      }
+    },
+    "consents": {
+      "type": "object", "additionalProperties": false,
+      "required": ["termsAccepted","mediaProcessingAccepted","voiceProcessingAccepted","acceptedAt","termsVersion"],
+      "properties": {
+        "termsAccepted": { "const": true },
+        "mediaProcessingAccepted": { "const": true },
+        "voiceProcessingAccepted": { "type": "boolean" },
+        "acceptedAt": { "type": "string", "format": "date-time" },
+        "termsVersion": { "type": "string", "minLength": 1, "maxLength": 100 }
+      }
+    }
+  },
+  "$defs": {
+    "code": { "type": "string", "minLength": 1, "maxLength": 100, "pattern": "^[A-Z0-9][A-Z0-9_-]*$" }
+  },
+  "$comment": "Application validation also enforces subtotal + tax = total and website/backend word/segment parity. Catalogue membership rules are resolved from the client packet."
+}

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": "1.0",
+  "eventType": "order.paid",
+  "eventId": "evt_example_paid_1001",
+  "occurredAt": "2026-08-07T04:00:00.000Z",
+  "source": {
+    "system": "wordpress",
+    "siteCode": "staging-site"
+  },
+  "customer": {
+    "externalCustomerId": "wp_customer_1001",
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "email": "jane@example.test",
+    "phone": "+15555550100"
+  },
+  "order": {
+    "externalOrderId": "1001",
+    "paymentReference": "test_payment_1001",
+    "currency": "USD",
+    "subtotal": 29900,
+    "tax": 0,
+    "total": 29900,
+    "paymentStatus": "paid",
+    "paidAt": "2026-08-07T04:00:00.000Z"
+  },
+  "production": {
+    "packageCode": "PACKAGE_STANDARD",
+    "peopleCount": 2,
+    "productBranch": "NO_PRODUCT",
+    "templateCode": "SCENE_MODERN_01",
+    "performanceStyleCode": "STYLE_CONVERSATIONAL",
+    "voiceOptionCode": "VOICE_CUSTOMER_SUPPLIED",
+    "customerNotes": "Synthetic staging example only."
+  },
+  "script": {
+    "text": "HOST: Hello world\n\nGUEST: Welcome friend",
+    "speakerMode": "MULTI_SPEAKER",
+    "declaredWordCount": 6,
+    "declaredSegmentCount": 2,
+    "speakers": [
+      { "speakerCode": "HOST", "displayName": "Host" },
+      { "speakerCode": "GUEST", "displayName": "Guest" }
+    ]
+  },
+  "uploads": [],
+  "consents": {
+    "termsAccepted": true,
+    "mediaProcessingAccepted": true,
+    "voiceProcessingAccepted": true,
+    "acceptedAt": "2026-08-07T04:00:00.000Z",
+    "termsVersion": "2026-07"
+  }
+}

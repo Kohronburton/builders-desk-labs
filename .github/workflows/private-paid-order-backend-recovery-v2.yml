@@ -1,0 +1,55 @@
+name: Private Paid Order Backend Recovery V2
+
+on:
+  pull_request:
+    paths:
+      - "apps/private-paid-order-backend/**"
+      - ".github/workflows/private-paid-order-backend-recovery-v2.yml"
+  push:
+    branches:
+      - "agent/private-paid-order-backend-mayne-v2"
+
+permissions:
+  contents: read
+
+jobs:
+  database-contract-and-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: paid_orders
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d paid_orders"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/paid_orders
+      RECOVERY_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile=false
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply checksum-tracked migrations twice
+        run: |
+          pnpm exec tsx apps/private-paid-order-backend/scripts/migrate.ts
+          pnpm exec tsx apps/private-paid-order-backend/scripts/migrate.ts
+      - name: Verify safe view and proprietary database denial
+        run: pnpm exec tsx apps/private-paid-order-backend/scripts/db-smoke.ts
+      - name: Verify payload-bound idempotency in PostgreSQL
+        run: pnpm exec tsx apps/private-paid-order-backend/scripts/idempotency-smoke.ts
+      - name: Dump app-owned schemas, restore, compare counts, and re-prove denial
+        run: pnpm exec tsx apps/private-paid-order-backend/scripts/recovery-smoke-v2.ts

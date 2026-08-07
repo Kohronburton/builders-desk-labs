@@ -1,0 +1,283 @@
+openapi: 3.1.0
+info:
+  title: Private Paid-Order Backend
+  version: 2.6.0
+  description: >-
+    Phase 1 private backend. WordPress may call only the signed paid-order intake endpoint.
+    Operator routes require an authenticated server-side session. Proprietary internal content is never exposed.
+servers:
+  - url: https://PLACEHOLDER_STAGING_BACKEND_HOST
+    description: Staging; replace before handoff
+paths:
+  /health/live:
+    get:
+      summary: Process liveness
+      responses:
+        '200':
+          description: Process is alive
+  /health/ready:
+    get:
+      summary: Dependency readiness
+      responses:
+        '200':
+          description: Critical dependencies are ready
+        '503':
+          description: One or more critical dependencies are unavailable
+  /api/v1/webhooks/wordpress/paid-orders:
+    post:
+      summary: Accept one successfully paid WordPress/WooCommerce order
+      description: >-
+        HMAC signs the exact raw JSON bytes using timestamp + '.' + nonce + '.' + rawBody.
+        Requires fresh timestamp/nonce and a stable logical idempotency key.
+      parameters:
+        - $ref: '#/components/parameters/WebhookKeyId'
+        - $ref: '#/components/parameters/WebhookTimestamp'
+        - $ref: '#/components/parameters/WebhookNonce'
+        - $ref: '#/components/parameters/WebhookSignature'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ./paid-order.schema.json
+      responses:
+        '201':
+          description: New order/job accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedOrder'
+        '200':
+          description: Safe duplicate; existing order/job returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedOrder'
+        '400':
+          $ref: '#/components/responses/Refused'
+        '401':
+          $ref: '#/components/responses/Refused'
+        '409':
+          $ref: '#/components/responses/Refused'
+        '422':
+          description: Field/catalogue/pricing parity validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationFailure'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/v1/auth/login:
+    post:
+      summary: Operator login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, maxLength: 320 }
+                password: { type: string, minLength: 1, maxLength: 1024 }
+      responses:
+        '200':
+          description: Authenticated; secure session cookie set
+        '401':
+          description: Generic login failure
+  /api/v1/auth/me:
+    get:
+      summary: Current operator
+      security: [{ operatorSession: [] }]
+      responses:
+        '200': { description: Current operator }
+        '401': { description: Authentication required }
+  /api/v1/auth/logout:
+    post:
+      summary: Revoke current operator session
+      security: [{ operatorSession: [], csrfToken: [] }]
+      responses:
+        '200': { description: Logged out }
+        '403': { description: CSRF failed }
+  /api/v1/jobs:
+    get:
+      summary: Operator-safe job list
+      security: [{ operatorSession: [] }]
+      parameters:
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/JobStatus' }
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 200 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - in: query
+          name: offset
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200': { description: Safe job summaries }
+        '401': { description: Authentication required }
+  /api/v1/jobs/{jobId}:
+    get:
+      summary: Operator-safe job detail, segments, and asset metadata
+      security: [{ operatorSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200': { description: Safe production detail; no proprietary fields }
+        '401': { description: Authentication required }
+        '404': { description: Job not found }
+  /api/v1/jobs/{jobId}/history:
+    get:
+      summary: Operator-safe job status history
+      security: [{ operatorSession: [] }]
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200': { description: Status history }
+        '401': { description: Authentication required }
+        '404': { description: Job not found }
+  /api/v1/jobs/{jobId}/status:
+    patch:
+      summary: Apply an allowed optimistic-concurrency job status transition
+      security: [{ operatorSession: [], csrfToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [currentStatus, newStatus]
+              properties:
+                currentStatus: { $ref: '#/components/schemas/JobStatus' }
+                newStatus: { $ref: '#/components/schemas/JobStatus' }
+                reason: { type: string, maxLength: 1000 }
+      responses:
+        '200': { description: Status updated and audited }
+        '403': { description: CSRF failed }
+        '409': { description: Transition denied or current status changed }
+        '422': { description: Invalid request }
+  /api/v1/assets/{assetId}/access-link:
+    post:
+      summary: Create an audited short-lived private asset link
+      security: [{ operatorSession: [], csrfToken: [] }]
+      parameters:
+        - in: path
+          name: assetId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Short-lived signed URL
+        '403': { description: CSRF failed }
+        '404': { description: Asset not available }
+components:
+  securitySchemes:
+    operatorSession:
+      type: apiKey
+      in: cookie
+      name: __Host-mayne_session
+      description: Opaque production session cookie; database stores only its hash.
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: Must also match the CSRF cookie and server-side hash.
+  parameters:
+    WebhookKeyId:
+      in: header
+      name: X-Webhook-Key-Id
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 100 }
+    WebhookTimestamp:
+      in: header
+      name: X-Webhook-Timestamp
+      required: true
+      schema: { type: string, pattern: '^[0-9]+$' }
+    WebhookNonce:
+      in: header
+      name: X-Webhook-Nonce
+      required: true
+      schema: { type: string, minLength: 16, maxLength: 200 }
+    WebhookSignature:
+      in: header
+      name: X-Webhook-Signature
+      required: true
+      schema: { type: string, pattern: '^sha256=[a-f0-9]{64}$' }
+    IdempotencyKey:
+      in: header
+      name: X-Idempotency-Key
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    JobId:
+      in: path
+      name: jobId
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    JobStatus:
+      type: string
+      enum: [RECEIVED, VALIDATED, ASSET_INGESTION_PENDING, READY_FOR_PRODUCTION, ON_HOLD, REQUIRES_REVIEW, CANCELLED, FAILED]
+    AcceptedOrder:
+      type: object
+      required: [success, requestId, orderId, jobId, publicJobNumber, status, duplicate]
+      properties:
+        success: { const: true }
+        requestId: { type: string }
+        orderId: { type: string }
+        jobId: { type: string }
+        publicJobNumber: { type: string }
+        status: { const: accepted }
+        duplicate: { type: boolean }
+    FieldError:
+      type: object
+      required: [path, code, message]
+      properties:
+        path: { type: string }
+        code: { type: string }
+        message: { type: string }
+    ValidationFailure:
+      type: object
+      required: [success, requestId, error]
+      properties:
+        success: { const: false }
+        requestId: { type: string }
+        error:
+          type: object
+          required: [code, message, fields]
+          properties:
+            code: { const: PAYLOAD_VALIDATION_FAILED }
+            message: { type: string }
+            fields:
+              type: array
+              items: { $ref: '#/components/schemas/FieldError' }
+    Refusal:
+      type: object
+      required: [success, requestId, error]
+      properties:
+        success: { const: false }
+        requestId: { type: string }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string }
+  responses:
+    Refused:
+      description: Request refused
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Refusal' }
+    Unavailable:
+      description: Temporary backend dependency/transaction failure
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Refusal' }
