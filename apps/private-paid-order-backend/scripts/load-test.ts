@@ -124,8 +124,18 @@ if (failureSamples.length) console.error("failure samples:", failureSamples);
 if (mode === "duplicate") {
   const newCount = statusCounts.get(201) ?? 0;
   const duplicateCount = statusCounts.get(200) ?? 0;
-  if (newCount !== 1 || duplicateCount !== 99) {
-    console.error(`duplicate-storm failed: expected 1x201 + 99x200, got ${newCount}x201 + ${duplicateCount}x200`);
+  const jobIds = new Set<string>();
+  for (const result of results) {
+    if (result.status !== 200 && result.status !== 201) continue;
+    try {
+      const parsed = JSON.parse(result.body) as { jobId?: unknown };
+      if (typeof parsed.jobId === "string") jobIds.add(parsed.jobId);
+    } catch {
+      // Non-JSON success is a contract failure below because no job ID is collected.
+    }
+  }
+  if (newCount !== 1 || duplicateCount !== 99 || jobIds.size !== 1) {
+    console.error(`duplicate-storm failed: expected 1x201 + 99x200 + one jobId; got ${newCount}x201 + ${duplicateCount}x200 + ${jobIds.size} jobIds`);
     process.exitCode = 1;
   }
 } else if (success !== results.length) {
