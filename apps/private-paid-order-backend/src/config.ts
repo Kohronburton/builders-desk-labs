@@ -5,12 +5,16 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().min(1).max(65535).default(3100),
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
+  DATA_ENCRYPTION_KEY_B64: z.string().min(1),
   WORDPRESS_WEBHOOK_KEY_PRIMARY_ID: z.string().min(1),
   WORDPRESS_WEBHOOK_KEY_PRIMARY_SECRET: z.string().min(32),
   WORDPRESS_WEBHOOK_KEY_SECONDARY_ID: z.string().optional().default(""),
   WORDPRESS_WEBHOOK_KEY_SECONDARY_SECRET: z.string().optional().default(""),
   WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS: z.coerce.number().int().min(30).max(900).default(300),
   WEBHOOK_NONCE_TTL_SECONDS: z.coerce.number().int().min(300).max(86400).default(900),
+  DEFAULT_ASSET_RETENTION_DAYS: z.coerce.number().int().refine((value) => [30, 60, 90].includes(value), "must be 30, 60, or 90").default(30),
+  SEGMENTATION_POLICY_VERSION: z.string().min(1).default("PLACEHOLDER-speaker-turn-v1"),
+  BUSINESS_RULES_APPROVED: z.enum(["true", "false"]).default("false"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info")
 }).passthrough();
 
@@ -24,10 +28,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
         throw new Error(`Production configuration contains unresolved placeholder: ${key}`);
       }
     }
+    if (parsed.BUSINESS_RULES_APPROVED !== "true") {
+      throw new Error("Production startup refused: BUSINESS_RULES_APPROVED must be true");
+    }
   }
   const keys = new Map<string, string>([[parsed.WORDPRESS_WEBHOOK_KEY_PRIMARY_ID, parsed.WORDPRESS_WEBHOOK_KEY_PRIMARY_SECRET]]);
   if (parsed.WORDPRESS_WEBHOOK_KEY_SECONDARY_ID && parsed.WORDPRESS_WEBHOOK_KEY_SECONDARY_SECRET) {
     keys.set(parsed.WORDPRESS_WEBHOOK_KEY_SECONDARY_ID, parsed.WORDPRESS_WEBHOOK_KEY_SECONDARY_SECRET);
   }
-  return Object.freeze({ ...parsed, webhookKeys: keys });
+  return Object.freeze({
+    ...parsed,
+    DEFAULT_ASSET_RETENTION_DAYS: parsed.DEFAULT_ASSET_RETENTION_DAYS as 30 | 60 | 90,
+    webhookKeys: keys
+  });
 }
