@@ -4,6 +4,7 @@ import type {
   JobStatus,
   OperatorAsset,
   OperatorJobDetail,
+  OperatorJobHistory,
   OperatorJobSummary,
   OperatorRepository,
   OperatorSegment
@@ -114,6 +115,31 @@ export class PostgresOperatorRepository implements OperatorRepository {
       ingestionStatus: row.ingestion_status,
       retentionDays: row.retention_policy_days,
       deleteAfter: row.delete_after
+    }));
+  }
+
+  async getHistory(jobId: string): Promise<OperatorJobHistory[]> {
+    const result = await this.pool.query<{
+      id: string;
+      previous_status: string | null;
+      new_status: string;
+      reason: string | null;
+      changed_by_type: string;
+      changed_by_id: string | null;
+      created_at: Date;
+    }>(
+      `SELECT id,previous_status,new_status,reason,changed_by_type,changed_by_id,created_at
+       FROM app.job_status_history WHERE job_id=$1 ORDER BY created_at ASC, id ASC`,
+      [jobId]
+    );
+    return result.rows.map((row) => ({
+      id: row.id,
+      previousStatus: row.previous_status,
+      newStatus: row.new_status,
+      reason: row.reason,
+      changedByType: row.changed_by_type,
+      changedById: row.changed_by_id,
+      createdAt: row.created_at
     }));
   }
 
