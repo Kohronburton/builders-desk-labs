@@ -6,6 +6,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   DATA_ENCRYPTION_KEY_B64: z.string().min(1),
+  AUDIT_HASH_KEY_B64: z.string().min(1),
   WORDPRESS_WEBHOOK_KEY_PRIMARY_ID: z.string().min(1),
   WORDPRESS_WEBHOOK_KEY_PRIMARY_SECRET: z.string().min(32),
   WORDPRESS_WEBHOOK_KEY_SECONDARY_ID: z.string().optional().default(""),
@@ -28,6 +29,9 @@ const envSchema = z.object({
   ALLOWED_UPLOAD_MIME_TYPES: z.string().min(1).default("image/jpeg,image/png,image/webp,audio/wav,audio/mpeg,audio/mp4,application/pdf"),
   ASSET_WORKER_POLL_MS: z.coerce.number().int().min(250).max(60000).default(2000),
   ASSET_WORKER_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+  OPERATOR_SESSION_TTL_SECONDS: z.coerce.number().int().min(900).max(86400).default(28800),
+  OPERATOR_MAX_FAILED_LOGINS: z.coerce.number().int().min(3).max(20).default(5),
+  OPERATOR_LOCK_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info")
 }).passthrough();
 
@@ -35,6 +39,12 @@ export type AppConfig = ReturnType<typeof loadConfig>;
 
 function csv(value: string): readonly string[] {
   return Object.freeze(value.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean));
+}
+
+function decodeKey(name: string, value: string): Buffer {
+  const key = Buffer.from(value, "base64");
+  if (key.length !== 32) throw new Error(`${name} must decode to exactly 32 bytes`);
+  return key;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
@@ -55,6 +65,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     }
   }
 
+  const dataEncryptionKey = decodeKey("DATA_ENCRYPTION_KEY_B64", parsed.DATA_ENCRYPTION_KEY_B64);
+  const auditHashKey = decodeKey("AUDIT_HASH_KEY_B64", parsed.AUDIT_HASH_KEY_B64);
   const keys = new Map<string, string>([[parsed.WORDPRESS_WEBHOOK_KEY_PRIMARY_ID, parsed.WORDPRESS_WEBHOOK_KEY_PRIMARY_SECRET]]);
   if (parsed.WORDPRESS_WEBHOOK_KEY_SECONDARY_ID && parsed.WORDPRESS_WEBHOOK_KEY_SECONDARY_SECRET) {
     keys.set(parsed.WORDPRESS_WEBHOOK_KEY_SECONDARY_ID, parsed.WORDPRESS_WEBHOOK_KEY_SECONDARY_SECRET);
@@ -66,6 +78,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     OBJECT_STORAGE_FORCE_PATH_STYLE: parsed.OBJECT_STORAGE_FORCE_PATH_STYLE === "true",
     allowedFileHosts,
     allowedUploadMimeTypes,
+    dataEncryptionKey,
+    auditHashKey,
     webhookKeys: keys
   });
 }
