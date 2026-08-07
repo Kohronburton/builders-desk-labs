@@ -32,7 +32,7 @@ const defaults: Record<string, { rps: number; seconds: number }> = {
 if (!["baseline", "burst", "stress", "duplicate"].includes(mode)) throw new Error(`Unknown LOAD_TEST_MODE: ${mode}`);
 
 const here = dirname(fileURLToPath(import.meta.url));
-const fixture = JSON.parse(await readFile(join(here, "..", "docs", "examples", "valid-paid-order.json"), "utf8") as ExamplePayload;
+const fixture = JSON.parse(await readFile(join(here, "..", "docs", "examples", "valid-paid-order.json"), "utf8")) as ExamplePayload;
 const runId = `${Date.now()}-${randomUUID().slice(0, 8)}`;
 
 function payloadFor(index: number, duplicate: boolean): ExamplePayload {
