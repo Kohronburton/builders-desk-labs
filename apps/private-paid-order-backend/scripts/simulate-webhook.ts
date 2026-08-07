@@ -1,7 +1,16 @@
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { signWebhook } from "../src/security/webhook.js";
+
+type ExamplePayload = {
+  eventId: string;
+  occurredAt: string;
+  order: { externalOrderId: string; paymentReference: string; paidAt: string };
+  consents: { acceptedAt: string };
+  [key: string]: unknown;
+};
 
 const url = process.env.SIMULATOR_URL;
 const keyId = process.env.SIMULATOR_KEY_ID;
@@ -11,7 +20,7 @@ if (process.env.NODE_ENV === "production") throw new Error("Simulator refuses NO
 
 const here = dirname(fileURLToPath(import.meta.url));
 const fixturePath = join(here, "..", "docs", "examples", "valid-paid-order.json");
-const payload = JSON.parse(await readFile(fixturePath, "utf8")) as Record<string, any>;
+const payload = JSON.parse(await readFile(fixturePath, "utf8")) as ExamplePayload;
 const now = new Date();
 const unique = Date.now().toString();
 payload.eventId = `sim_${unique}`;
@@ -23,7 +32,7 @@ payload.consents.acceptedAt = now.toISOString();
 
 const body = Buffer.from(JSON.stringify(payload), "utf8");
 const timestamp = Math.floor(Date.now() / 1000).toString();
-const nonce = crypto.randomUUID();
+const nonce = randomUUID();
 const idempotencyKey = `sim-${unique}-paid`;
 const signature = signWebhook(secret, timestamp, nonce, body);
 
