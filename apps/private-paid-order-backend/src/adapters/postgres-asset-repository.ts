@@ -83,8 +83,7 @@ export class PostgresAssetRepository implements AssetRepository {
       );
       if (!remaining.rowCount) {
         const updated = await client.query(
-          `UPDATE app.jobs
-           SET status='READY_FOR_PRODUCTION', updated_at=now()
+          `UPDATE app.jobs SET status='READY_FOR_PRODUCTION', updated_at=now()
            WHERE id=$1 AND status='ASSET_INGESTION_PENDING'`,
           [jobId]
         );
@@ -137,9 +136,18 @@ export class PostgresAssetRepository implements AssetRepository {
     await this.pool.query(
       `UPDATE app.uploaded_assets
        SET ingestion_status='DELETED', deleted_at=now(), storage_key=NULL, source_url_encrypted=NULL,
-           lease_until=NULL, worker_id=NULL
+           lease_until=NULL, worker_id=NULL, last_error_code=NULL
        WHERE id=$1`,
       [assetId]
+    );
+  }
+
+  async releaseDeletion(assetId: string, errorCode: string): Promise<void> {
+    await this.pool.query(
+      `UPDATE app.uploaded_assets
+       SET ingestion_status='READY', last_error_code=$2
+       WHERE id=$1 AND ingestion_status='DELETING'`,
+      [assetId, errorCode]
     );
   }
 }
