@@ -23,7 +23,9 @@ const envSchema = z.object({
   OBJECT_STORAGE_FORCE_PATH_STYLE: z.enum(["true", "false"]).default("false"),
   SIGNED_URL_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(600),
   MAX_UPLOAD_SIZE_BYTES: z.coerce.number().int().min(1024).max(100 * 1024 * 1024).default(25 * 1024 * 1024),
+  ASSET_DOWNLOAD_TIMEOUT_MS: z.coerce.number().int().min(1000).max(60000).default(15000),
   WORDPRESS_ALLOWED_FILE_HOSTS: z.string().min(1),
+  ALLOWED_UPLOAD_MIME_TYPES: z.string().min(1).default("image/jpeg,image/png,image/webp,audio/wav,audio/mpeg,audio/mp4,application/pdf"),
   ASSET_WORKER_POLL_MS: z.coerce.number().int().min(250).max(60000).default(2000),
   ASSET_WORKER_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info")
@@ -31,10 +33,16 @@ const envSchema = z.object({
 
 export type AppConfig = ReturnType<typeof loadConfig>;
 
+function csv(value: string): readonly string[] {
+  return Object.freeze(value.split(",").map((item) => item.trim().toLowerCase()).filter(Boolean));
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   const parsed = envSchema.parse(env);
-  const allowedFileHosts = parsed.WORDPRESS_ALLOWED_FILE_HOSTS.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
+  const allowedFileHosts = csv(parsed.WORDPRESS_ALLOWED_FILE_HOSTS);
+  const allowedUploadMimeTypes = csv(parsed.ALLOWED_UPLOAD_MIME_TYPES);
   if (allowedFileHosts.length === 0) throw new Error("WORDPRESS_ALLOWED_FILE_HOSTS must contain at least one host");
+  if (allowedUploadMimeTypes.length === 0) throw new Error("ALLOWED_UPLOAD_MIME_TYPES must contain at least one MIME type");
 
   if (parsed.NODE_ENV === "production") {
     for (const [key, value] of Object.entries(parsed)) {
@@ -56,7 +64,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     ...parsed,
     DEFAULT_ASSET_RETENTION_DAYS: parsed.DEFAULT_ASSET_RETENTION_DAYS as 30 | 60 | 90,
     OBJECT_STORAGE_FORCE_PATH_STYLE: parsed.OBJECT_STORAGE_FORCE_PATH_STYLE === "true",
-    allowedFileHosts: Object.freeze(allowedFileHosts),
+    allowedFileHosts,
+    allowedUploadMimeTypes,
     webhookKeys: keys
   });
 }
