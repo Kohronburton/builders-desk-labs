@@ -86,7 +86,9 @@ export class AssetWorkerService {
         await this.options.repository.markDeleted(asset.id);
         deleted += 1;
       } catch (error) {
-        this.options.logger.log("error", "expired asset deletion failed", { assetId: asset.id, errorCode: errorCode(error) });
+        const code = errorCode(error);
+        await this.options.repository.releaseDeletion(asset.id, code);
+        this.options.logger.log("error", "expired asset deletion failed", { assetId: asset.id, errorCode: code });
       }
     }
     return deleted;
