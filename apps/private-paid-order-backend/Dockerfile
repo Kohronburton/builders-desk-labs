@@ -19,12 +19,13 @@ RUN pnpm --filter @builders-desk/private-paid-order-backend check \
 
 FROM node:22-alpine AS runtime
 ENV NODE_ENV=production
-WORKDIR /app
+WORKDIR /workspace/apps/private-paid-order-backend
 
+# Preserve pnpm's workspace-relative symlink layout.
 COPY --from=build /workspace/node_modules /workspace/node_modules
-COPY --from=build /workspace/apps/private-paid-order-backend/node_modules /app/node_modules
-COPY --from=build /workspace/apps/private-paid-order-backend/dist /app/dist
-COPY --from=build /workspace/apps/private-paid-order-backend/package.json /app/package.json
+COPY --from=build /workspace/apps/private-paid-order-backend/node_modules /workspace/apps/private-paid-order-backend/node_modules
+COPY --from=build /workspace/apps/private-paid-order-backend/dist /workspace/apps/private-paid-order-backend/dist
+COPY --from=build /workspace/apps/private-paid-order-backend/package.json /workspace/apps/private-paid-order-backend/package.json
 
 USER node
 EXPOSE 3100
