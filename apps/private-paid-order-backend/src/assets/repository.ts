@@ -19,4 +19,5 @@ export interface AssetRepository {
   fail(input: { assetId: string; errorCode: string; retryAt: Date | null }): Promise<void>;
   claimExpired(limit: number): Promise<ExpiredAsset[]>;
   markDeleted(assetId: string): Promise<void>;
+  releaseDeletion(assetId: string, errorCode: string): Promise<void>;
 }
