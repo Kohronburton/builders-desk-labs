@@ -54,7 +54,7 @@ jobs:
           --health-retries 20
     env:
       DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/paid_orders
-      BACKUP_FILE: ${{ runner.temp }}/paid-orders-ci.dump
+      BACKUP_FILE: /tmp/paid-orders-ci.dump
       RESTORE_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/paid_orders_restore
     steps:
       - uses: actions/checkout@v4
