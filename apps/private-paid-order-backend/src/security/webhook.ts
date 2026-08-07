@@ -24,10 +24,9 @@ export interface VerifyOptions {
   nonceTtlSeconds: number;
 }
 
-export interface VerifyResult {
-  ok: boolean;
-  failure?: WebhookGuardFailure;
-}
+export type VerifyResult =
+  | { ok: true }
+  | { ok: false; failure: WebhookGuardFailure };
 
 export function signWebhook(secret: string, timestamp: string, nonce: string, rawBody: Buffer): string {
   const prefix = Buffer.from(`${timestamp}.${nonce}.`, "utf8");
