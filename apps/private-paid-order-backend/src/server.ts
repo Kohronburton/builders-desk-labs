@@ -3,12 +3,14 @@ import { Pool } from "pg";
 import { Redis } from "ioredis";
 import { JsonConsoleLogger } from "@mayne/foundation-core";
 import { PostgresAuthRepository } from "./adapters/postgres-auth-repository.js";
+import { PostgresCatalogueRepository } from "./adapters/postgres-catalogue-repository.js";
 import { PostgresIntakeRepository } from "./adapters/postgres-intake-repository.js";
 import { PostgresOperatorRepository } from "./adapters/postgres-operator-repository.js";
 import { RedisNonceStore } from "./adapters/redis-nonce-store.js";
 import { buildApp } from "./app.js";
 import { S3PrivateStorage } from "./assets/storage.js";
 import { AuthService } from "./auth/service.js";
+import { CatalogueService } from "./catalogue/service.js";
 import { loadConfig } from "./config.js";
 import { DraftSpeakerTurnSegmenter } from "./domain/segmentation.js";
 import { registerOperatorRoutes } from "./operator/routes.js";
@@ -39,6 +41,10 @@ const s3 = new S3Client({
 const storage = new S3PrivateStorage(s3, config.OBJECT_STORAGE_BUCKET);
 const encryptor = new FieldEncryptor(config.DATA_ENCRYPTION_KEY_B64);
 const segmenter = new DraftSpeakerTurnSegmenter();
+const catalogue = new CatalogueService(
+  new PostgresCatalogueRepository(pool),
+  config.NODE_ENV !== "production"
+);
 
 if (segmenter.version !== config.SEGMENTATION_POLICY_VERSION) {
   throw new Error(`Configured segmentation policy ${config.SEGMENTATION_POLICY_VERSION} is not implemented by this build`);
@@ -55,6 +61,7 @@ const app = await buildApp({
   repository: new PostgresIntakeRepository(pool),
   nonceStore: new RedisNonceStore(redis),
   keyResolver: { resolve: (keyId) => config.webhookKeys.get(keyId) ?? null },
+  catalogue,
   segmenter,
   encryptSourceUrl: (url) => encryptor.encrypt(url),
   retentionDays: config.DEFAULT_ASSET_RETENTION_DAYS,
@@ -73,7 +80,10 @@ const app = await buildApp({
     privateStorage: async () => {
       const ok = await storage.health();
       return ok ? { ok: true } : { ok: false, detail: "private object storage unavailable" };
-    }
+    },
+    catalogue: async () => config.NODE_ENV === "production"
+      ? catalogue.readiness()
+      : { ok: true, detail: "synthetic catalogue permitted outside production" }
   }
 });
 
