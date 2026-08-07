@@ -9,3 +9,8 @@ Every demo follows a consistent product spine:
 **Command Center → Workspace → Modules → Data Registry → Integrations → System Health**
 
 Client-specific implementations live on dedicated `agent/*` branches and enter `main` through reviewed pull requests. Demo data must be synthetic and must never contain client secrets or personal records.
+
+## Modules
+
+- `apps/property-management-automation` — PropertyFlow AI operational automation demo.
+- `apps/qa-foundations-course` — Free, browser-first QA course with portfolio artifacts and a capstone.
