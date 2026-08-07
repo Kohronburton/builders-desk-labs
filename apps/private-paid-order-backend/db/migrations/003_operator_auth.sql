@@ -29,7 +29,10 @@ CREATE TABLE app.operator_sessions (
 CREATE INDEX operator_sessions_user_idx ON app.operator_sessions(user_id, expires_at DESC);
 CREATE INDEX operator_sessions_expiry_idx ON app.operator_sessions(expires_at) WHERE revoked_at IS NULL;
 
-CREATE OR REPLACE VIEW app.operator_job_view AS
+-- The Phase 1 view has a different ordered shape. Drop/recreate instead of
+-- CREATE OR REPLACE so PostgreSQL never interprets a new column as a rename.
+DROP VIEW IF EXISTS app.operator_job_view;
+CREATE VIEW app.operator_job_view AS
 SELECT
   j.id AS job_id,
   j.public_job_number,
