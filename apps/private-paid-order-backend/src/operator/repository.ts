@@ -60,6 +60,16 @@ export interface OperatorAsset {
   deleteAfter: Date | null;
 }
 
+export interface OperatorJobHistory {
+  id: string;
+  previousStatus: string | null;
+  newStatus: string;
+  reason: string | null;
+  changedByType: string;
+  changedById: string | null;
+  createdAt: Date;
+}
+
 export interface AssetAccessRecord {
   id: string;
   jobId: string;
@@ -72,6 +82,7 @@ export interface OperatorRepository {
   getJob(jobId: string): Promise<OperatorJobDetail | null>;
   getSegments(jobId: string): Promise<OperatorSegment[]>;
   getAssets(jobId: string): Promise<OperatorAsset[]>;
+  getHistory(jobId: string): Promise<OperatorJobHistory[]>;
   getAssetForAccess(assetId: string): Promise<AssetAccessRecord | null>;
   updateStatus(input: { jobId: string; expectedCurrentStatus: JobStatus; newStatus: JobStatus; reason?: string | undefined; operatorId: string }): Promise<boolean>;
 }
