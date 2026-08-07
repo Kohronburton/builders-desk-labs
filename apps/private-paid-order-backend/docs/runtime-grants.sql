@@ -1,0 +1,18 @@
+-- Run as the migration/schema owner after replacing PLACEHOLDER_RUNTIME_DB_ROLE.
+-- The runtime role must already exist and must NOT own the database or schemas.
+-- Do not run this file unchanged in production.
+
+BEGIN;
+
+REVOKE ALL ON SCHEMA internal FROM PUBLIC;
+REVOKE ALL ON ALL TABLES IN SCHEMA internal FROM PUBLIC;
+
+GRANT USAGE ON SCHEMA app TO PLACEHOLDER_RUNTIME_DB_ROLE;
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA app TO PLACEHOLDER_RUNTIME_DB_ROLE;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA app TO PLACEHOLDER_RUNTIME_DB_ROLE;
+
+-- Intentionally no USAGE or table privileges on internal.
+REVOKE ALL ON SCHEMA internal FROM PLACEHOLDER_RUNTIME_DB_ROLE;
+REVOKE ALL ON ALL TABLES IN SCHEMA internal FROM PLACEHOLDER_RUNTIME_DB_ROLE;
+
+COMMIT;
