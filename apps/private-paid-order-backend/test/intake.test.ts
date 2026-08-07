@@ -1,18 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { buildApp } from "../src/app.js";
+import type { CatalogueFieldError } from "../src/catalogue/service.js";
 import { DraftSpeakerTurnSegmenter } from "../src/domain/segmentation.js";
 import { signWebhook } from "../src/security/webhook.js";
 import { MemoryIntakeRepository, MemoryNonceStore } from "./fakes.js";
 import { validPaidOrder, webhookSecret } from "./fixtures.js";
 
-async function setup() {
+async function setup(catalogueErrors: CatalogueFieldError[] = []) {
   const repository = new MemoryIntakeRepository();
   const nonceStore = new MemoryNonceStore();
   const app = await buildApp({
     repository,
     nonceStore,
     keyResolver: { resolve: (keyId) => keyId === "test-key" ? webhookSecret : null },
+    catalogue: { validate: async () => catalogueErrors },
     segmenter: new DraftSpeakerTurnSegmenter(),
     encryptSourceUrl: (url) => `encrypted:${url}`,
     retentionDays: 30,
@@ -112,6 +114,16 @@ test("invalid payload returns actionable field errors", async (t) => {
   assert.equal(response.statusCode, 422);
   assert.equal(repository.acceptCalls, 0);
   assert.ok(response.json().error.fields.some((field: { path: string }) => field.path === "customer.email"));
+});
+
+test("unknown catalogue selection is refused before order creation", async (t) => {
+  const { app, repository } = await setup([{ path: "production.templateCode", code: "UNKNOWN_CATALOGUE_CODE", message: "UNKNOWN is not an active template code." }]);
+  t.after(() => app.close());
+  const body = JSON.stringify(validPaidOrder());
+  const response = await app.inject({ method: "POST", url: "/api/v1/webhooks/wordpress/paid-orders", headers: signedHeaders(body), payload: body });
+  assert.equal(response.statusCode, 422);
+  assert.equal(repository.acceptCalls, 0);
+  assert.ok(response.json().error.fields.some((field: { code: string }) => field.code === "UNKNOWN_CATALOGUE_CODE"));
 });
 
 test("website/backend segment mismatch is refused", async (t) => {
