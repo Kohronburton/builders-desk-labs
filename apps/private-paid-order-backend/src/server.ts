@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import Redis from "ioredis";
+import { Redis } from "ioredis";
 import { JsonConsoleLogger } from "@mayne/foundation-core";
 import { buildApp } from "./app.js";
 import { PostgresIntakeRepository } from "./adapters/postgres-intake-repository.js";
