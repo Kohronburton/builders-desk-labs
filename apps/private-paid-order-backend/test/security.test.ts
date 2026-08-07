@@ -10,6 +10,7 @@ function productionEnv(overrides: Record<string, string> = {}): NodeJS.ProcessEn
     DATABASE_URL: "postgresql://db/app",
     REDIS_URL: "redis://redis:6379",
     DATA_ENCRYPTION_KEY_B64: randomBytes(32).toString("base64"),
+    AUDIT_HASH_KEY_B64: randomBytes(32).toString("base64"),
     WORDPRESS_WEBHOOK_KEY_PRIMARY_ID: "primary",
     WORDPRESS_WEBHOOK_KEY_PRIMARY_SECRET: "0123456789abcdef0123456789abcdef",
     SEGMENTATION_POLICY_VERSION: "client-v1",
@@ -42,4 +43,8 @@ test("production refuses unapproved business rules", () => {
 test("asset source host allow-list is normalized", () => {
   const config = loadConfig(productionEnv({ WORDPRESS_ALLOWED_FILE_HOSTS: "Uploads.Example.Test,cdn.example.test" }));
   assert.deepEqual(config.allowedFileHosts, ["uploads.example.test", "cdn.example.test"]);
+});
+
+test("privacy hash key must be exactly 32 bytes", () => {
+  assert.throws(() => loadConfig(productionEnv({ AUDIT_HASH_KEY_B64: Buffer.from("short").toString("base64") })), /AUDIT_HASH_KEY_B64/);
 });
