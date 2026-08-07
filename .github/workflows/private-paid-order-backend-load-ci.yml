@@ -1,0 +1,118 @@
+name: Private Paid Order Backend Load CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/private-paid-order-backend/**"
+      - ".github/workflows/private-paid-order-backend-load-ci.yml"
+  push:
+    branches:
+      - "agent/private-paid-order-backend-mayne-v2"
+
+permissions:
+  contents: read
+
+jobs:
+  live-http-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: paid_orders
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d paid_orders"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+    env:
+      NODE_ENV: test
+      PORT: 3100
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/paid_orders
+      REDIS_URL: redis://127.0.0.1:6379
+      DATA_ENCRYPTION_KEY_B64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      AUDIT_HASH_KEY_B64: AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE=
+      WORDPRESS_WEBHOOK_KEY_PRIMARY_ID: ci-primary
+      WORDPRESS_WEBHOOK_KEY_PRIMARY_SECRET: 0123456789abcdef0123456789abcdef
+      WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS: 300
+      WEBHOOK_NONCE_TTL_SECONDS: 900
+      BUSINESS_RULES_APPROVED: "false"
+      SEGMENTATION_POLICY_VERSION: PLACEHOLDER-speaker-turn-v1
+      DEFAULT_ASSET_RETENTION_DAYS: 30
+      OBJECT_STORAGE_ENDPOINT: http://127.0.0.1:9000
+      OBJECT_STORAGE_REGION: us-east-1
+      OBJECT_STORAGE_BUCKET: paid-order-assets-ci
+      OBJECT_STORAGE_ACCESS_KEY: ci-access
+      OBJECT_STORAGE_SECRET_KEY: ci-secret
+      OBJECT_STORAGE_FORCE_PATH_STYLE: "true"
+      SIGNED_URL_TTL_SECONDS: 600
+      MAX_UPLOAD_SIZE_BYTES: 26214400
+      ASSET_DOWNLOAD_TIMEOUT_MS: 15000
+      WORDPRESS_ALLOWED_FILE_HOSTS: uploads.example.test
+      ALLOWED_UPLOAD_MIME_TYPES: image/jpeg,image/png,image/webp,audio/wav,audio/mpeg,audio/mp4,application/pdf
+      ASSET_WORKER_POLL_MS: 2000
+      ASSET_WORKER_MAX_ATTEMPTS: 5
+      OPERATOR_SESSION_TTL_SECONDS: 28800
+      OPERATOR_MAX_FAILED_LOGINS: 5
+      OPERATOR_LOCK_MINUTES: 15
+      LOAD_TEST_URL: http://127.0.0.1:3100/api/v1/webhooks/wordpress/paid-orders
+      LOAD_TEST_KEY_ID: ci-primary
+      LOAD_TEST_SECRET: 0123456789abcdef0123456789abcdef
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: pnpm install --frozen-lockfile=false
+      - name: Migrate database
+        run: pnpm exec tsx apps/private-paid-order-backend/scripts/migrate.ts
+      - name: Start API
+        run: |
+          pnpm --filter @builders-desk/private-paid-order-backend dev > /tmp/paid-order-api.log 2>&1 &
+          echo $! > /tmp/paid-order-api.pid
+          for i in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3100/health/live >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/paid-order-api.log
+          exit 1
+      - name: Baseline 5 rps
+        env:
+          LOAD_TEST_MODE: baseline
+        run: pnpm exec tsx apps/private-paid-order-backend/scripts/load-test.ts
+      - name: Burst 25 rps
+        env:
+          LOAD_TEST_MODE: burst
+        run: pnpm exec tsx apps/private-paid-order-backend/scripts/load-test.ts
+      - name: Duplicate storm 100 concurrent deliveries
+        env:
+          LOAD_TEST_MODE: duplicate
+        run: pnpm exec tsx apps/private-paid-order-backend/scripts/load-test.ts
+      - name: Preserve API log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: paid-order-load-api-log
+          path: /tmp/paid-order-api.log
+          retention-days: 3
+      - name: Stop API
+        if: always()
+        run: |
+          if [ -f /tmp/paid-order-api.pid ]; then kill "$(cat /tmp/paid-order-api.pid)" || true; fi
