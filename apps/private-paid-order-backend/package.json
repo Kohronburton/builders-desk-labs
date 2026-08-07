@@ -17,6 +17,7 @@
     "@aws-sdk/client-s3": "^3.750.0",
     "@aws-sdk/s3-request-presigner": "^3.750.0",
     "@fastify/cookie": "^11.0.2",
+    "@fastify/formbody": "^8.0.2",
     "@fastify/helmet": "^13.0.1",
     "@fastify/rate-limit": "^10.2.1",
     "@mayne/foundation-core": "workspace:*",
