@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Compare prompt-only JSON generation with strict schema-enforced structured output." />
+  <title>Structured Output Contract Lab</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Builder's Desk Labs · Reliability Demo</p>
+        <h1>Structured Output<br /><span>Contract Lab</span></h1>
+        <p class="lede">See the difference between asking a model to follow JSON and enforcing an application contract.</p>
+      </div>
+      <div class="health-card">
+        <span class="status-dot" id="healthDot"></span>
+        <div><strong id="healthTitle">Checking API</strong><small id="healthDetail">Connecting to local server…</small></div>
+      </div>
+    </header>
+
+    <section class="comparison-banner">
+      <article><span class="mode-label bad">Prompt-only</span><strong id="promptRate">—</strong><small>schema-valid responses</small></article>
+      <div class="versus">VS</div>
+      <article><span class="mode-label good">Strict schema</span><strong id="strictRate">—</strong><small>schema-valid responses</small></article>
+    </section>
+
+    <section class="workbench">
+      <div class="panel inputs">
+        <div class="panel-title"><span>01</span><h2>Request contract</h2></div>
+        <label>Prompt<textarea id="prompt">Create a customer support ticket for a user who cannot reset their password after three attempts.</textarea></label>
+        <div class="editor-head"><label for="schema">Editable JSON Schema</label><button id="resetSchema" class="text-button">Reset schema</button></div>
+        <textarea id="schema" class="code-editor" spellcheck="false"></textarea>
+        <div class="schema-state" id="schemaState">Schema ready</div>
+      </div>
+
+      <div class="panel output-panel">
+        <div class="panel-title"><span>02</span><h2>Model response</h2></div>
+        <div class="mode-toggle" role="group" aria-label="Output mode">
+          <button data-mode="prompt-only" class="mode-button active">Prompt-only</button>
+          <button data-mode="strict" class="mode-button">Strict schema</button>
+        </div>
+        <button id="runOnce" class="primary-button">Run single request</button>
+        <div class="result-meta">
+          <span id="validationBadge" class="badge idle">Not run</span>
+          <span id="latency">— ms</span>
+        </div>
+        <pre id="responseViewer">The raw model response will appear here.</pre>
+        <details><summary>Validation details</summary><pre id="validationDetails">No validation result yet.</pre></details>
+      </div>
+    </section>
+
+    <section class="test-panel panel">
+      <div class="panel-title"><span>03</span><div><h2>Automated proof run</h2><p>Run the same contract repeatedly and measure what actually survives validation.</p></div></div>
+      <div class="test-controls">
+        <label>Requests<select id="testCount"><option>25</option><option>50</option><option>75</option><option>100</option></select></label>
+        <button id="runComparison" class="primary-button">Run both modes</button>
+      </div>
+      <div class="progress-wrap"><div class="progress" id="progress"></div></div>
+      <div class="metrics">
+        <article><small>Total requests</small><strong id="totalRequests">0</strong></article>
+        <article><small>Valid responses</small><strong id="validResponses">0</strong></article>
+        <article><small>Schema failures</small><strong id="failedResponses">0</strong></article>
+        <article><small>Average latency</small><strong id="averageLatency">—</strong></article>
+      </div>
+      <div class="run-grid">
+        <div><h3>Prompt-only run</h3><div id="promptLog" class="request-log empty">No run yet.</div></div>
+        <div><h3>Strict schema run</h3><div id="strictLog" class="request-log empty">No run yet.</div></div>
+      </div>
+    </section>
+
+    <section class="panel error-panel">
+      <div class="panel-title"><span>04</span><h2>Retry & error log</h2></div>
+      <div id="errorLog" class="error-log">No errors recorded.</div>
+    </section>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
