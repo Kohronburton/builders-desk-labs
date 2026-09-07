@@ -22,6 +22,7 @@ The projects in this lab are designed to show how I move from an ambiguous opera
 |---|---|---|
 | [Supplier Pricing Engine](https://github.com/Kohronburton/supplier-pricing-engine) | Suppliers apply different sizing, compatibility, pricing, freight, and margin rules. | Versioned rules, deterministic pricing, explainable calculations, approvals, tests, CI, and a [live CPQ demo](https://cpq.kohronburton.com/demo). |
 | [Logistics Control Tower](https://github.com/Kohronburton/logistics-control-tower) | Last-mile operations need capacity-aware planning, exception recovery, and live visibility. | React control tower, Node API, FastAPI optimizer, SSE events, graceful degradation, resilience scenarios, tests, CI, and Docker services. |
+| [NOIR 01 Scroll Reveal](https://noir-cap-scroll-demo.jamalburton.chatgpt.site) | Premium product storytelling needs smooth, scroll-controlled motion without a heavy 3D runtime. | Inertial scroll scrubbing, progressive reveal, responsive layout, reduced-motion fallback, and optimized product imagery. |
 | [STT Operations Command Center](https://github.com/Kohronburton/STTOne) | Disconnected systems of record create payroll, billing, reporting, and ownership risk. | Governed integration layer, source-of-truth boundaries, exception routing, executive metrics, typed Next.js prototype, and a 90-day implementation model. |
 
 ## Architecture spine

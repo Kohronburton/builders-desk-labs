@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NOIR 01 — Signature Cap</title>
+  <meta name="description" content="A scroll-driven luxury cap reveal demo.">
+  <style>
+    :root{color-scheme:dark;--ink:#050505;--paper:#f5f1e8;--muted:#8b8985;--orange:#ff5a0a}
+    *{box-sizing:border-box}html{background:var(--ink);scroll-behavior:smooth}body{margin:0;background:var(--ink);color:var(--paper);font-family:Arial,Helvetica,sans-serif;overflow-x:hidden}
+    .rail{height:480vh;position:relative;background:radial-gradient(circle at 50% 48%,#191919 0,#080808 35%,#030303 70%)}
+    .stage{position:sticky;top:0;height:100vh;overflow:hidden;display:grid;place-items:center;isolation:isolate}
+    .grain{position:absolute;inset:0;opacity:.055;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E")}
+    header{position:absolute;z-index:8;top:0;left:0;width:100%;display:flex;justify-content:space-between;align-items:center;padding:28px 36px;font-size:12px;letter-spacing:.2em;text-transform:uppercase;transition:opacity .35s ease}
+    .mark{font-weight:800}.edition{color:#777}
+    .intro{position:absolute;z-index:4;text-align:center;will-change:transform,opacity}
+    .eyebrow{font-size:11px;letter-spacing:.42em;text-transform:uppercase;color:#a7a39b;margin-bottom:22px}
+    h1{font-family:Georgia,'Times New Roman',serif;font-size:clamp(72px,15vw,220px);font-weight:400;letter-spacing:-.07em;line-height:.78;margin:0}
+    .sub{margin-top:32px;color:#797772;font-size:12px;letter-spacing:.24em;text-transform:uppercase}
+    .product{position:absolute;z-index:3;width:min(70vw,760px);aspect-ratio:1;display:grid;place-items:center;opacity:0;transform:translateY(10vh) scale(.78);will-change:transform,opacity,filter}
+    .halo{position:absolute;width:78%;height:22%;bottom:18%;background:radial-gradient(ellipse,var(--orange) 0,rgba(255,90,10,.18) 37%,transparent 72%);filter:blur(24px);opacity:0;transform:scale(.6);will-change:transform,opacity}
+    .spot{position:absolute;width:75%;height:75%;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.12),rgba(255,255,255,0) 64%);mix-blend-mode:screen;opacity:0;transform:translate3d(-18%,-10%,0);will-change:transform,opacity}
+    .cap{position:relative;z-index:2;width:100%;height:100%;object-fit:contain;filter:brightness(.34) contrast(1.1) saturate(.8);transform-origin:50% 56%;will-change:transform,filter}
+    .copy{position:absolute;z-index:5;left:clamp(24px,8vw,120px);bottom:11vh;max-width:340px;opacity:0;transform:translateY(25px)}
+    .copy strong{display:block;font-family:Georgia,'Times New Roman',serif;font-size:clamp(34px,4vw,58px);font-weight:400;line-height:1;margin-bottom:14px}.copy span{color:#9a9791;font-size:13px;line-height:1.55;letter-spacing:.04em}
+    .counter{position:absolute;right:36px;bottom:30px;z-index:7;color:#8a8781;font:11px/1 monospace;letter-spacing:.16em}
+    .progress{position:absolute;z-index:8;top:0;left:0;width:100%;height:2px;background:rgba(255,255,255,.05)}.progress span{display:block;width:100%;height:100%;background:linear-gradient(90deg,#7b2d06,var(--orange));transform:scaleX(0);transform-origin:left;will-change:transform}
+    .chapter{position:absolute;z-index:7;right:36px;top:50%;writing-mode:vertical-rl;transform:translateY(-50%);color:#6e6b66;font-size:10px;letter-spacing:.3em;text-transform:uppercase;transition:opacity .3s ease}
+    .scroll{position:absolute;z-index:7;left:36px;bottom:28px;display:flex;align-items:center;gap:12px;color:#777;font-size:10px;letter-spacing:.24em;text-transform:uppercase}.line{width:42px;height:1px;background:#555;overflow:hidden}.line:after{content:"";display:block;width:100%;height:100%;background:var(--orange);transform:translateX(-100%);animation:scan 2s infinite}@keyframes scan{to{transform:translateX(100%)}}
+    @media(max-width:700px){header{padding:22px 20px}.edition,.chapter{display:none}.product{width:112vw;max-width:680px}.copy{left:22px;right:22px;bottom:12vh;max-width:290px}.counter{right:20px}.scroll{left:20px}h1{font-size:27vw}}
+    @media(prefers-reduced-motion:reduce){.rail{height:100vh}.intro{opacity:0!important}.product{opacity:1!important;transform:none!important}.cap{transform:none!important;filter:brightness(.82) contrast(1.05)!important}.copy{opacity:1!important;transform:none!important}.halo{opacity:.5!important}.scroll{display:none}}
+  </style>
+</head>
+<body>
+  <main class="rail" id="experience">
+    <section class="stage" aria-label="Scroll-driven product reveal">
+      <div class="grain"></div>
+      <div class="progress"><span id="progress"></span></div><header id="header"><div class="mark">NOIR / 01</div><div class="edition">Signature Series · 001 of 100</div></header>
+      <div class="intro" id="intro"><div class="eyebrow">Quietly unmistakable</div><h1>Brand</h1><div class="sub">Form follows character</div></div>
+      <div class="product" id="product"><div class="spot" id="spot"></div><div class="halo" id="halo"></div><img class="cap" id="cap" src="assets/cap.webp" alt="Black luxury cap with orange underbrim" decoding="async" fetchpriority="high"></div>
+      <div class="copy" id="copy"><strong>The signature<br>is underneath.</strong><span>Reserved on the surface. Impossible to miss when it matters.</span></div>
+      <div class="scroll" id="scrollCue"><span class="line"></span><span>Scroll to reveal</span></div><div class="chapter" id="chapter">01 · Form</div><div class="counter" id="counter">00 / 100</div>
+    </section>
+  </main>
+  <script>
+    const clamp=(n,a=0,b=1)=>Math.min(b,Math.max(a,n));
+    const intro=document.querySelector('#intro'),product=document.querySelector('#product'),cap=document.querySelector('#cap'),copy=document.querySelector('#copy'),halo=document.querySelector('#halo'),spot=document.querySelector('#spot'),counter=document.querySelector('#counter'),progress=document.querySelector('#progress'),chapter=document.querySelector('#chapter'),scrollCue=document.querySelector('#scrollCue'),header=document.querySelector('#header');
+    let target=0,current=0;
+    function onScroll(){const max=document.documentElement.scrollHeight-innerHeight;target=max?scrollY/max:0}
+    function render(){current+=(target-current)*.075;const p=clamp(current);const introOut=clamp(p/0.2);intro.style.opacity=1-introOut;intro.style.transform=`translate3d(0,${-introOut*55}px,0) scale(${1-introOut*.06})`;const reveal=clamp((p-.1)/.3);product.style.opacity=reveal;product.style.transform=`translate3d(0,${(1-reveal)*9}vh,0) scale(${.76+reveal*.24})`;const turn=clamp((p-.18)/.66);const eased=turn<.5?2*turn*turn:1-Math.pow(-2*turn+2,2)/2;cap.style.transform=`perspective(1100px) rotateY(${-14+eased*218}deg) rotateX(${4+eased*31}deg) rotateZ(${-2+eased*3.5}deg) scale(${1+Math.sin(eased*Math.PI)*.055})`;const light=clamp((p-.23)/.58);cap.style.filter=`brightness(${.3+light*.66}) contrast(${1.14-light*.06}) saturate(${.72+light*.48}) drop-shadow(0 ${24+light*18}px ${26+light*18}px rgba(0,0,0,.62))`;spot.style.opacity=reveal*.55;spot.style.transform=`translate3d(${-18+turn*34}%,${-10+Math.sin(turn*Math.PI)*9}%,0) scale(${.9+turn*.2})`;const finale=clamp((p-.73)/.17);halo.style.opacity=finale*.84;halo.style.transform=`scale(${.6+finale*.62})`;copy.style.opacity=finale;copy.style.transform=`translate3d(0,${25-finale*25}px,0)`;progress.style.transform=`scaleX(${p})`;counter.textContent=`${String(Math.round(p*100)).padStart(2,'0')} / 100`;chapter.textContent=p<.24?'01 · Form':p<.7?'02 · Motion':'03 · Signature';scrollCue.style.opacity=1-clamp(p/.1);header.style.opacity=.72+finale*.28;requestAnimationFrame(render)}
+    addEventListener('scroll',onScroll,{passive:true});addEventListener('resize',onScroll);onScroll();render();
+  </script>
+</body>
+</html>
